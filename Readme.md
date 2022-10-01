@@ -70,7 +70,7 @@ Anacondaの利用を前提として説明します。Pythonのバージョンは
 ソースコードをgithubからcloneします。
 
 ```
-git clone TbskModem
+git clone https://github.com/nyatla/TBSKmodem.git
 ```
 
 step4までは外部モジュールは不要です。
@@ -87,7 +87,7 @@ conda install -c conda-forge python-sounddevice
 
 ### サンプルプログラムの場所
 
-サンプルプログラムはTbskModem/getstartedディレクトリにあります。
+サンプルプログラムはTBSKmodem/getstartedディレクトリにあります。
 
 #### step1. データをwaveファイルに変換する。
 step1.modulate.pyは、ビット値を変調することができます。
