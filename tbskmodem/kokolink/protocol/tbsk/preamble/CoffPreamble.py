@@ -48,8 +48,8 @@ class CoffPreamble(Preamble):
             cycle=self._cycle
             cofbuf_len=symbol_ticks*(6+cycle*2)
             # cofbuf_len=symbol_ticks*10
-            cof=BufferedIterator[float,float](SelfCorrcoefIterator(symbol_ticks,src,symbol_ticks),cofbuf_len)
-            avi=AverageInterator(cof,symbol_ticks)
+            cof=BufferedIterator[float](SelfCorrcoefIterator(symbol_ticks,src,symbol_ticks),cofbuf_len)
+            avi=AverageInterator[float](cof,symbol_ticks)
             sample_width=cycle+1
             # rb=RingBuffer(symbol_ticks*3,0)
             rb=RingBuffer(symbol_ticks*sample_width,0)

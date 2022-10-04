@@ -8,7 +8,7 @@ from ...utils.math import XorShiftRand31
 from ...types import Iterator,Tuple,Sequence
 
 
-class TraitTone(UserList[float]):
+class TraitTone(UserList):
     def __init__(self,d:Sequence[float]):
         super().__init__(d)
     def mul(self,v:float)->"TraitTone":

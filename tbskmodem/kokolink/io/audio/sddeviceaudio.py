@@ -11,7 +11,6 @@ https://python-sounddevice.readthedocs.io/
 """
 
 
-from queue import Empty, Queue
 from time import sleep
 import sounddevice as sd
 import numpy as np
@@ -26,7 +25,7 @@ log = logging.getLogger(__name__)
 from .audioif import IAudioPlayer,IAudioInputInterator
 from ...utils.functions import isinstances
 from ...utils.wavefile import PcmData
-from ...types import Sequence,BinaryIO
+from ...types import Sequence,BinaryIO,Queue
 
 class SoundDeviceAudioPlayer(IAudioPlayer):
     """SoundDeviceをラップしたプレイヤーです。

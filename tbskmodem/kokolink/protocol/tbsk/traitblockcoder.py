@@ -1,4 +1,4 @@
-from typing import overload
+from typing import overload,TypeVar
 
 from ...utils.recoverable import RecoverableStopIteration
 from ...streams.rostreams import BasicRoStream
@@ -15,29 +15,29 @@ class WaitForInputException(Exception):
 
 
 
+T=TypeVar("T")
 
 
 
 
 
-
-class AverageInterator(SumIterator[float]):
+class AverageInterator(SumIterator[T]):
     """ 末尾からticksまでの平均値を連続して返却します。
         このイテレータはRecoverableStopInterationを利用できます。
     """
     @overload
-    def __init__(self,src:Iterator[float],ticks:int):
+    def __init__(self,src:Iterator[T],ticks:int):
         ...
     def __init__(self,*args,**kwds):
         self._length:int
-        def __init__B(src:Iterator[float],ticks:int):
+        def __init__B(src:Iterator[T],ticks:int):
             super(self.__class__,self).__init__(src,ticks)
             self._length=ticks
         if isinstances(args,(Iterator,int,)):
             __init__B(*args,**kwds)
         else:
             raise TypeError()
-    def __next__(self) -> float:
+    def __next__(self) -> T:
         try:
             r=super().__next__()
         except RecoverableStopIteration as e:
@@ -107,7 +107,7 @@ class TraitBlockDecoder(IBitStream,IDecoder[IRoStream[float],int],BasicRoStream[
         ...
     def __init__(self,*args,**kwds):
         self._trait_block_ticks:int
-        self._avefilter:AverageInterator
+        self._avefilter:AverageInterator[float]
         self._threshold:float
         self._is_eos:bool=True
         def __init__B(trait_block_ticks:int,threshold:float=0.2):
@@ -152,7 +152,7 @@ class TraitBlockDecoder(IBitStream,IDecoder[IRoStream[float],int],BasicRoStream[
         self._src=src
         self._cof=SelfCorrcoefIterator(self._trait_block_ticks,src,self._trait_block_ticks)
         ave_window=max(int(self._trait_block_ticks*0.1),2) #検出用の平均フィルタは0.1*len(tone)//2だけずれてる。個々を直したらtbskmodem#TbskModulatorも直せ
-        self._avefilter=AverageInterator(self._cof,ave_window)
+        self._avefilter=AverageInterator[float](self._cof,ave_window)
         self._last_data=0
 
         self._preload_size=self._trait_block_ticks+ave_window//2 #平均値フィルタの初期化サイズ。ave_window/2足してるのは、平均値の遅延分。

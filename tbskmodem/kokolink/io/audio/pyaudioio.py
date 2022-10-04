@@ -1,4 +1,3 @@
-from queue import Empty, Queue
 import pyaudio
 import numpy as np
 from enum import Enum
@@ -7,7 +6,7 @@ import logging
 log = logging.getLogger(__name__)
 
 from .audioif import IAudioInputInterator
-from ...types import Sequence
+from ...types import Sequence,Empty, Queue
 
 class PyAudioInputIterator(IAudioInputInterator):
     class Status(Enum):
