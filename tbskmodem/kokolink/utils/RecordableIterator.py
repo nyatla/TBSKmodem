@@ -1,5 +1,6 @@
-from typing import TypeVar,Iterator,Deque,List
+from typing import TypeVar
 
+from ..types import Deque,Iterator,List
 from .recoverable import RecoverableStopIteration,RecoverableIterator
 
 T=TypeVar("T")

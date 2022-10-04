@@ -1,9 +1,9 @@
 from math import sqrt
-from typing import Deque, Iterable, Iterator,Union, overload,Tuple
+from typing import Union
 
 
 
-
+from ....types import Deque, Iterable, Iterator
 from ...recoverable import RecoverableIterator, RecoverableStopIteration
 
 class SelfCorrcoefIterator(RecoverableIterator[float]):

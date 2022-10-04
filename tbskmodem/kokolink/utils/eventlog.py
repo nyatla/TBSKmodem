@@ -1,10 +1,11 @@
 """ デバック用のイベントログを記録するクラスです。
 """
-from typing import Sequence,Iterator,Tuple, TypeVar,overload,Deque,Generic,List
+from typing import TypeVar,Generic
+
 import json
 from abc import ABC, abstractmethod
 
-
+from ..types import Sequence,List
 from ..utils.serializable import ISerializable, Serialized
 
 

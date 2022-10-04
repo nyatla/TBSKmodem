@@ -1,9 +1,10 @@
 
-from typing import Union,Iterable,Iterator,Deque, overload,List
+from typing import overload
 import struct
 from ..interfaces import IByteStream
 from ..utils.functions import isinstances
 from .bytestreams import BasicByteStream
+from ..types import Iterable,Iterator,List
 
 
 

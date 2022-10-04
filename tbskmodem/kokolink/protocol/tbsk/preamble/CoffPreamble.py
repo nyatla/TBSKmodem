@@ -1,16 +1,13 @@
 
-from types import NoneType
-from typing import Generator, Iterator,Sequence, Tuple, TypeVar,Union,Generic
+from typing import TypeVar,Union
 
-
-
+from ....types import NoneType,Generator, Tuple,Sequence
+from ....interfaces import IRoStream
 from ....utils.recoverable import GeneratorRecoverException, RecoverableStopIteration
-
 from ....utils import RingBuffer,BufferedIterator
 from ....utils.math.corrcoef import SelfCorrcoefIterator
-from ....interfaces import IRoStream
-from ..traitblockcoder import AverageInterator, TraitBlockEncoder
 from ....streams import BitStream
+from ..traitblockcoder import AverageInterator, TraitBlockEncoder
 from .Preamble import Preamble
 
 T=TypeVar("T")

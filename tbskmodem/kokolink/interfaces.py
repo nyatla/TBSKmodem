@@ -2,11 +2,11 @@
 このモジュールには、ライブラリ全体で頻繁に使用する共通のインタフェイスを定義します。
 
 """
-from typing import Iterator, Tuple,TypeVar,Sequence,Generic
+from typing import TypeVar,Generic
 from abc import abstractmethod,ABC, abstractproperty
 
 from .utils.recoverable import RecoverableIterator
-
+from .types import Tuple
 T=TypeVar("T")
 
 

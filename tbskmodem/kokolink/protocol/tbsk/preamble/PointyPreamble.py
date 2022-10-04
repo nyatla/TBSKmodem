@@ -1,5 +1,4 @@
 
-from typing import Iterator,Sequence
 
 
 
@@ -10,6 +9,7 @@ from ....streams import RoStream,BitStream
 from ....interfaces import IRoStream
 from ..traitblockcoder import TraitBlockEncoder
 from .Preamble import Preamble
+from ....types import Sequence
 
 
 

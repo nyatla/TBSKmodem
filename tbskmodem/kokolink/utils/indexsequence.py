@@ -1,4 +1,4 @@
-from typing import Sequence, Iterable, Tuple
+from ..types import Sequence, Iterable, Tuple
 from .math.XorShiftRand31 import XorShiftRand31
 from .math.GrayCode import GrayCode
 

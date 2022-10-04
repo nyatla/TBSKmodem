@@ -1,7 +1,8 @@
 
-from typing import Iterable, Iterator,Sequence,Tuple, overload,Dict,TypeVar,Generic,TypeVar
+from typing import Generic,TypeVar
 from .rostreams import BasicRoStream
 from ..interfaces import IFilter, IRoStream
+from ..types import Sequence,Tuple
 
 T=TypeVar("T")
 class ChaindStream(BasicRoStream[T],IRoStream[T],Generic[T]):

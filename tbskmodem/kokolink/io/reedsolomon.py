@@ -12,13 +12,9 @@
 
 
 """
-from abc import ABC, abstractmethod,abstractproperty
-from msilib.schema import Error
-from typing import TypeVar,Sequence
+from ..types import Sequence
 from ..interfaces import IConverter
-
 from ..streams import RoStream
-
 from ..filter import BitsWidthFilter
 
 

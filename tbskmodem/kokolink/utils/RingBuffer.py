@@ -1,5 +1,6 @@
-from typing import List, Iterator,Sequence, overload,TypeVar,Generic,Iterable,Tuple
+from typing import overload,TypeVar,Generic
 
+from ..types import List,Sequence,Iterable,Tuple
 T=TypeVar("T")
 class RingBuffer(Generic[T]):
     """ スライス可能なリングバッファ。

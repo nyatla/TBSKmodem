@@ -1,4 +1,4 @@
-from typing import Iterator,Union
+from ..types import Iterator
 from .RingBuffer import RingBuffer
 from .recoverable import RecoverableIterator, RecoverableStopIteration
 

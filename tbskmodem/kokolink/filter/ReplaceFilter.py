@@ -1,6 +1,7 @@
 from itertools import repeat
-from typing import Deque, Iterator, Sequence,Generic, Union,TypeVar
+from typing import Generic, Union,TypeVar
 from ..utils.indexsequence import IndexSequence
+from ..types import Deque, Iterator, Sequence
 
 
 

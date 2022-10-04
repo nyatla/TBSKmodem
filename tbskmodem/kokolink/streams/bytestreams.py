@@ -1,10 +1,10 @@
-from typing import Union,Iterable,Iterator,Deque, overload,List
+from typing import Union
 import struct
 from abc import ABC
 
 from .rostreams import BasicRoStream,FlattenRoStream
 from ..interfaces import IByteStream,IBytesProvider
-from ..utils.functions import isinstances
+from ..types import Iterator,Deque
 
 class BasicByteStream(BasicRoStream[int],IByteStream,ABC):
     def getAsUInt32be(self)->int:

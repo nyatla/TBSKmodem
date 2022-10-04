@@ -1,11 +1,11 @@
 import math
-from typing import Deque, Generic, Iterator, TypeVar, overload,Tuple,Sequence
+from typing import overload
 from collections import UserList
 
 from ...utils.math import MSequence
 from ...utils.functions import isinstances
 from ...utils.math import XorShiftRand31
-
+from ...types import Iterator,Tuple,Sequence
 
 
 class TraitTone(UserList[float]):

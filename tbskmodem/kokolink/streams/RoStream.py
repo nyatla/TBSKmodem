@@ -1,7 +1,8 @@
-from typing import Deque, Iterable, Iterator,Union,Tuple,Sequence,Generic,TypeVar
+from typing import Union,Generic,TypeVar
 
 from ..utils.recoverable import RecoverableStopIteration
 from .rostreams import BasicRoStream
+from ..types import Iterable, Iterator
 
 T=TypeVar("T")
 

@@ -1,15 +1,13 @@
 from itertools import chain
-from types import NoneType
-from typing import Callable, Generic, Iterable, Iterator, Tuple, Union, overload,Generator
+from typing import overload,Union
 
+from ...types import NoneType, Iterable, Iterator,Generator
 from ...utils.recoverable import GeneratorRecoverException, RecoverableException, RecoverableStopIteration,RecoverableIterator
-
-from ...filter import BitsWidthFilter,Bits2BytesFilter,Bits2StrFilter
 from ...utils.functions import isinstances
-
+from ...interfaces import IBitStream,IRoStream
+from ...filter import BitsWidthFilter,Bits2BytesFilter,Bits2StrFilter
 from ...streams import ByteStream
 from ...streams.rostreams import BasicRoStream
-from ...interfaces import IBitStream,IRoStream
 from ...streams import BitStream
 from ...streams import RoStream
 

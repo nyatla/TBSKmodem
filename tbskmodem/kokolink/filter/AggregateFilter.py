@@ -3,10 +3,10 @@
 """
 
 
-from typing import Sequence,Generic,TypeVar
+from typing import Generic,TypeVar
 
 
-
+from ..types import Sequence
 from ..interfaces import IRoStream,IFilter
 from ..streams.rostreams import BasicRoStream
 

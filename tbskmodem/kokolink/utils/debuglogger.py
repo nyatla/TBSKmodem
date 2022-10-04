@@ -1,7 +1,6 @@
 
-from typing import Sequence,Tuple,overload,List
-from ..interfaces import IPeekableStream, IReader,IGenerator
-
+from ..interfaces import IPeekableStream
+from ..types import Sequence,List
 
 
 class DebugInstance(List):

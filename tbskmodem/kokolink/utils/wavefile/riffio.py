@@ -26,11 +26,12 @@ References:
 https://www.recordingblogs.com/wiki/list-chunk-of-a-wave-file
 """
 
-from typing import Sequence,Tuple, Type,Union
-from abc import ABC, abstractproperty
-from typing import overload
 import struct
+from typing import Union,overload
+from abc import ABC, abstractproperty
 from io import BytesIO,RawIOBase
+
+from ...types import Sequence,Tuple
 
 class Chunk(ABC):
     """チャンクのベースクラス。

@@ -1,5 +1,4 @@
 from time import sleep
-from typing import Deque, Sequence, Tuple
 from threading import Thread
 
 
@@ -7,6 +6,7 @@ from threading import Thread
 
 from ..io.audio.sddeviceaudio import SoundDeviceAudioPlayer, SoundDeviceInputIterator
 from ..utils.wavefile import PcmData
+from ..types import Sequence, Tuple
 
 
 

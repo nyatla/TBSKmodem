@@ -2,12 +2,13 @@
     
 """
 
-from typing import Iterable, Iterator, Union
+from typing import Union
 
 from ..utils.recoverable import RecoverableStopIteration
-from ..interfaces import IRoStream,IBitStream
+from ..interfaces import IBitStream
 from .rostreams import BasicRoStream
 from ..utils import BitsWidthConvertIterator
+from ..types import Iterable,Iterator
 
 class BitStream(BasicRoStream[int],IBitStream):
     """ 任意ビット幅のintストリームを1ビット単位のビットストリームに展開します。

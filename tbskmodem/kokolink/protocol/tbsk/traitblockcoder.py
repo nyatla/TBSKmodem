@@ -1,4 +1,4 @@
-from typing import Deque, Iterator, overload,Tuple,Union
+from typing import overload
 
 from ...utils.recoverable import RecoverableStopIteration
 from ...streams.rostreams import BasicRoStream
@@ -7,7 +7,7 @@ from ...utils.functions import isinstances
 from ...utils.math.corrcoef import SelfCorrcoefIterator
 from ...utils import SumIterator
 from .toneblock import TraitTone
-
+from ...types import Deque, Iterator,Tuple
 
 class WaitForInputException(Exception):
     ...

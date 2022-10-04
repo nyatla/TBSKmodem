@@ -1,5 +1,9 @@
-from typing import Sequence, overload
 import math
+import struct
+from typing import Union
+
+from ...types import Sequence
+
 
 def points2Liner(x:Sequence[float],y:Sequence[float]):
     """ 最小二乗法で近似直線の係数を計算します。
@@ -48,8 +52,7 @@ def bitCount(bits:int):
     bits = (bits & 0x00ff00ff) + (bits >> 8 & 0x00ff00ff)
     return (bits & 0x0000ffff) + (bits >>16 & 0x0000ffff)
 
-import struct
-from typing import Union
+
 
 BITSEQUENCEABLE=Union[bytes,str]
 

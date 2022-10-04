@@ -1,5 +1,4 @@
-from typing import List
-
+from ...types import List
 class GrayCode:
     @classmethod
     def genArray(cls,n:int)->List[int]:

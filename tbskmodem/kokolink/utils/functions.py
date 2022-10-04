@@ -1,7 +1,8 @@
 
-from typing import Sequence,Type,Tuple,Dict,NewType,Union,List
+from typing import Type,NewType,Union
 import binascii
 
+from ..types import Sequence,Tuple,Dict,List
 """isinstancesがintかfloatでtrueを返す特別な型です。
 """
 Number=NewType('Number', int)

@@ -1,7 +1,9 @@
 """ Copied from https://zenn.dev/plhr7/articles/aaefdba049abd6
 
 """
-from typing import Iterable, Iterator, overload,Union
+from typing import overload,Union
+
+from ...types import Iterable, Iterator
 
 
 class CRC16:

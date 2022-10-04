@@ -1,4 +1,4 @@
-from typing import Iterator
+from ...types import Iterator
 class XorShiftRand31(Iterator[int]):
     """ https://ja.wikipedia.org/wiki/Xorshift
     """

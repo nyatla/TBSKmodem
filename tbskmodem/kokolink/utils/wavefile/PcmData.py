@@ -1,8 +1,10 @@
-# import numpy as np
+#import numpy as np
 import struct
-from typing import Union, overload,Sequence,Tuple
+from typing import Union, overload
 # import os,sys
 # sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+
+from ...types import Sequence,Tuple
 
 from ...utils.functions import isinstances
 from .riffio import Chunk, RawChunk, WaveFile,fmtChunk

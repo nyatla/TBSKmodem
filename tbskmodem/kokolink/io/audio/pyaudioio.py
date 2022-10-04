@@ -2,12 +2,12 @@ from queue import Empty, Queue
 import pyaudio
 import numpy as np
 from enum import Enum
-from threading import Semaphore,Thread,Lock
-from typing import Iterator,Deque,Sequence
-from .audioif import IAudioInputInterator
+from threading import Thread,Lock
 import logging
 log = logging.getLogger(__name__)
 
+from .audioif import IAudioInputInterator
+from ...types import Sequence
 
 class PyAudioInputIterator(IAudioInputInterator):
     class Status(Enum):

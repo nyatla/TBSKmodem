@@ -12,10 +12,13 @@ https://python-sounddevice.readthedocs.io/
 
 
 from queue import Empty, Queue
-from time import sleep, time
-from typing import BinaryIO, overload,Union
+from time import sleep
 import sounddevice as sd
 import numpy as np
+from typing import overload,Union
+import sys
+from threading import Lock,Event
+
 
 import logging
 log = logging.getLogger(__name__)
@@ -23,8 +26,7 @@ log = logging.getLogger(__name__)
 from .audioif import IAudioPlayer,IAudioInputInterator
 from ...utils.functions import isinstances
 from ...utils.wavefile import PcmData
-from threading import Event
-
+from ...types import Sequence,BinaryIO
 
 class SoundDeviceAudioPlayer(IAudioPlayer):
     """SoundDeviceをラップしたプレイヤーです。
@@ -136,9 +138,6 @@ class SoundDeviceAudioPlayer(IAudioPlayer):
         if self._stream is not None:
             self.stop()
 
-from typing import Iterator,Deque,Sequence
-from threading import Semaphore,Thread,Lock
-import sys
 
 
     

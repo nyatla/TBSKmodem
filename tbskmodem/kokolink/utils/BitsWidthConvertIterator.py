@@ -1,7 +1,7 @@
 """ BitStreamクラスを宣言します。
     
 """
-from typing import Iterator
+from ..types import Iterator
 from ..utils.recoverable import RecoverableStopIteration
 
 

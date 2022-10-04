@@ -1,7 +1,6 @@
-from types import NoneType
-from typing import Callable, Generator, Iterator,TypeVar,Generic,Union,Any
+from typing import Generic,TypeVar
 
-
+from ..types import NoneType,Generator, Iterator
 
 T=TypeVar("T")
 

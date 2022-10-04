@@ -1,4 +1,4 @@
-from typing import Dict,Iterator
+from ...types import Dict,Iterator
 
 class MSequence(Iterator[int]):
     """M系列シーケンスを返すイテレータを生成します。

@@ -1,9 +1,9 @@
-from typing import Deque, Iterable, Iterator, List,Union,Tuple,Sequence,Generic,TypeVar
+from typing import Union,Generic,TypeVar
 from abc import ABC
 
 
 
-
+from ..types import Iterable, Iterator, List,Tuple
 from ..interfaces import IRoStream,IPeekableStream
 from ..utils.recoverable import  RecoverableStopIteration
 
