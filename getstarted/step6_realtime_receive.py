@@ -1,12 +1,12 @@
 """ リアルタイムに文字列を受信するサンプルです。
 """
-import sys,os
-
-
-import sys,os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData,SoundDeviceInputIterator
-
+try:
+    from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData,SoundDeviceInputIterator
+except ModuleNotFoundError:
+    import sys,os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData,SoundDeviceInputIterator
+    print("Imported local library.")
 
 def main():
     #save to sample

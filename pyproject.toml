@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools", "setuptools_scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tbskmodem"
+description = "Trait block shift keying modem."
+readme = "Readme.md"
+classifiers = ["Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+version = "0.1.0"
+
+[tool.setuptools]
+packages = ["tbskmodem","tbskmodem_apps"]
+
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+
+
+
+[project.scripts]
+"tbskmodem.py" = "tbskmodem_apps.tbskmodem:main"

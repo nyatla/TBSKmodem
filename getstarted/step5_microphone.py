@@ -1,10 +1,13 @@
 """ マイクのテストスクリプトです。
     ターミナルにマイクの音量を表示します。
 """
-import sys,os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from tbskmodem import SoundDeviceInputIterator
-
+try:
+    from tbskmodem import SoundDeviceInputIterator
+except ModuleNotFoundError:
+    import sys,os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    from tbskmodem import SoundDeviceInputIterator
+    print("Imported local library.")
 
 import math
 def main():

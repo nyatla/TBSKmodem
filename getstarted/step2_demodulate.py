@@ -1,8 +1,13 @@
 """ wavに保存した振幅信号からビットを復元します。
 """
-import sys,os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from tbskmodem import TbskDemodulator,XPskSinTone,PcmData
+try:
+    from tbskmodem import TbskDemodulator,XPskSinTone,PcmData
+except ModuleNotFoundError:
+    import sys,os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    from tbskmodem import TbskDemodulator,XPskSinTone,PcmData
+    print("Imported local library.")
+
 
 
 def main():
