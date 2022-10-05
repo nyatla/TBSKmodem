@@ -29,7 +29,10 @@ def main():
     with SoundDeviceInputIterator(carrier,device_id=0) as stream:
         while True:
             print(">",end="",flush=True)
-            s=demod.demodulateAsStr(stream) # 
+            try:
+                s=demod.demodulateAsStr(stream)
+            except StopIteration:
+                break
             for i in s:
                 print(i,end="",flush=True)
             print("\nTerminated.")
