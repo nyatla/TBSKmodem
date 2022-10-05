@@ -178,7 +178,7 @@ class TbskDemodulator:
 
     def demodulateAsInt(self,src:Iterator[float],bitwidth:int=8)->RecoverableIterator[int]:
         """ TBSK信号からnビットのint値配列を復元します。
-            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
+            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はStopInterationをraiseします。
         """
         def gen(src):
             try:
@@ -213,7 +213,7 @@ class TbskDemodulator:
     def demodulateAsBytes(self,src:Iterator[float])->RecoverableIterator[bytes]:
         """ TBSK信号からsizeバイト単位でbytesを返します。
             途中でストリームが終端した場合、既に読みだしたビットは破棄されます。
-            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。            
+            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はStopInterationをraiseします。         
         """
         def gen(src):
             try:
@@ -246,7 +246,7 @@ class TbskDemodulator:
     def demodulateAsStr(self,src:Iterator[float],encoding:str="utf-8")->RecoverableIterator[str]:
         """ TBSK信号からsize文字単位でstrを返します。
             途中でストリームが終端した場合、既に読みだしたビットは破棄されます。
-            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。            
+            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はStopInterationをraiseします。
         """
         def gen(src):
             try:
