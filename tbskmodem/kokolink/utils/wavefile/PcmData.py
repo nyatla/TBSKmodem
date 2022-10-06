@@ -123,7 +123,7 @@ class PcmData:
             # b=list(np.frombuffer(data, dtype="uint8")/256-0.5)
             # print(a==b)
             # return list(np.frombuffer(data, dtype="uint8")/256-0.5)
-            return [struct.unpack_from("B",data,i)[0]/256-0.5 for i in range(len(data))]
+            return [struct.unpack_from("B",data,i)[0]/255-0.5 for i in range(len(data))]
         elif bits==16:
             assert(len(data)%2==0)
             r=(2**16-1)//2 #Daisukeパッチ

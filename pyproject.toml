@@ -19,7 +19,9 @@ packages = ["tbskmodem","tbskmodem_apps"]
 [tool.poetry.dependencies]
 python = "^3.8"
 
-
+dependencies = [
+    "tqdm~=4.20"
+]
 
 
 [project.scripts]

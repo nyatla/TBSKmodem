@@ -13,10 +13,10 @@ https://python-sounddevice.readthedocs.io/
 
 from time import sleep
 import sounddevice as sd
-import numpy as np
-from typing import overload,Union
+from typing import Iterable, Iterator, overload,Union
 import sys
 from threading import Lock,Event
+import itertools
 
 
 import logging
@@ -25,7 +25,42 @@ log = logging.getLogger(__name__)
 from .audioif import IAudioPlayer,IAudioInputInterator
 from ...utils.functions import isinstances
 from ...utils.wavefile import PcmData
-from ...types import Sequence,BinaryIO,Queue
+from ...types import Sequence,BinaryIO,Queue,Empty,NoneType
+
+
+
+import struct
+from typing import Union
+from ...types import Iterator
+class Bytes8to2FloatIterator(Iterator[float]):
+    def __init__(self,src:bytes):
+        self._src=iter(src)
+    def __next__(self) -> float:
+        return next(self._src)/255-0.5
+
+class Bytes16to2FloatIterator(Iterator[float]):
+    def __init__(self,src:bytes):
+        self._src=iter(src)
+    def __next__(self) -> float:
+        r=(2**16-1)//2 #Daisukeパッチ
+        # b=struct.pack("2B",next(self._src),next(self._src))
+        # d=struct.unpack("<h",b)[0]
+        # return struct.unpack("<h",b)[0]/r
+        # f=next(self._src)
+        # g=next(self._src)
+        # c=g<<8 | f
+        # k=c if 0x8000 & c == 0 else c-0xffff-1
+        # h=struct.unpack("<h",struct.pack("2B",f,g))[0]
+        # assert(h==k)
+        # return h/r
+        c=next(self._src) | next(self._src)<<8
+        k=c if 0x8000 & c == 0 else c-0xffff-1
+        return k/r
+
+
+
+
+
 
 class SoundDeviceAudioPlayer(IAudioPlayer):
     """SoundDeviceをラップしたプレイヤーです。
@@ -37,7 +72,7 @@ class SoundDeviceAudioPlayer(IAudioPlayer):
     def __init__(self,filepath:str,devide_id:int=0):
         ...
     @overload
-    def __init__(self,pcm:PcmData):
+    def __init__(self,pcm:PcmData,devide_id:int=0):
         ...
     @overload
     def __init__(self,data:bytes,samplebits:int=8,framerate:int=8000,channels:int=1,device_id:int=None):
@@ -53,25 +88,25 @@ class SoundDeviceAudioPlayer(IAudioPlayer):
         def __init__B(data:bytes,samplebits:int=8,framerate:int=8000,channels:int=1,device_id:int=None):
             assert(channels==1)
             if samplebits==8:
-                self._data=(np.frombuffer(data, dtype="uint8").astype("int16")-128).astype("int8")
+                self._data=tuple(Bytes8to2FloatIterator(data))
                 # print(self._data[0:500])
             else:
-                self._data=np.frombuffer(data, dtype="int16")
+                self._data=tuple(Bytes16to2FloatIterator(data))
             self._framerate=framerate
             self._current_pos=None
             self._device_id=device_id if device_id is not None else sd.default.device
         if isinstances(args,(BinaryIO,int,int,int,int)):
             __init__B(*args)
-        elif isinstances(args,(str,int)) or isinstances(args,(str,)):
-            __init__C(*args)
-        elif isinstances(args,[PcmData,]):
-            __init__D(*args)
+        elif isinstances(args,(str,),(kwd,{"device_id":(int,NoneType)})):
+            __init__C(*args,**kwd)
+        elif isinstances(args,[PcmData,],(kwd,{"device_id":(int,NoneType)})):
+            __init__D(*args,**kwd)
         elif len(args) in [1,2]:
             __init__A(*args)
         else:
             raise ValueError(args)
         self._framerate:float
-        self._data:np.ndarray
+        self._data:Iterator[float]
         self._current_pos:int
         self._device_id:int
         self._stream:sd.Stream=None
@@ -82,45 +117,32 @@ class SoundDeviceAudioPlayer(IAudioPlayer):
         self.close()
     def play(self):
         assert(self._stream is None)
-        self._finish_event.clear()        
+        self._finish_event.clear()  
+        diter=iter(self._data)      
         self._current_pos=0
         def callback(outdata, frames, time, status):
             if status:
                 print(status)
-            chunksize = min(len(self._data) - self._current_pos, frames)
-            # print(chunksize,len(outdata))
-            # print(len(outdata),len(self._data),chunksize)
-            for i in range(chunksize):
-                outdata[i]=self._data[self._current_pos+i]
-            for i in range(chunksize,frames):
-                outdata[i]=0
-            if chunksize<1:
+            d=list(itertools.islice(diter,0,frames))
+            for i in range(len(d)):
+                outdata[i]=d[i]
+            for i in range(frames-len(d)):
+                outdata[i+len(d)]=0
+            self._current_pos=self._current_pos+len(d)
+            if len(d)==0:
                 raise sd.CallbackStop()
 
 
-            # outdata = np.reshape(self._data[self._current_pos:self._current_pos + chunksize],[chunksize,1])
-            
-            # outdata[:chunksize]=[[i] for i in self._data[self._current_pos:self._current_pos + chunksize]]
-            # outdata[:chunksize] = np.reshape(self._data[self._current_pos:self._current_pos + chunksize],[chunksize,1])
-            # print(chunksize,len(outdata),outdata)
-            # if chunksize < frames:
-            #     outdata[chunksize:] = [[0] for i in range(chunksize)]
-            # self._current_pos += chunksize
-
-
-            # chunksize = min(len(self._data) - self._current_pos, frames)
-            # if chunksize<1:
-            #     raise sd.CallbackStop()
-            # outdata[:chunksize] = np.reshape(self._data[self._current_pos:self._current_pos + chunksize],[chunksize,1])
-            # if chunksize < frames:
-            #     outdata[chunksize:] = 0
-            self._current_pos += chunksize
+        print(self._framerate)
         stream = sd.OutputStream(
-            dtype=self._data.dtype,
+            dtype="float32",latency="high",
             samplerate=self._framerate, device=self._device_id, channels=1,
             callback=callback, finished_callback=self._finish_event.set)
         stream.start()
         self._stream=stream
+    @property
+    def pos(self)->float:
+        return self._current_pos/(len(self._data))
     def stop(self):
         if self._stream is None:
             return
@@ -232,6 +254,7 @@ class SoundDeviceInputIterator(IAudioInputInterator):
             return src/r
         raise ValueError()
 
+__all__=[SoundDeviceAudioPlayer,SoundDeviceInputIterator]
 
 if __name__ == '__main__':
     with SoundDeviceInputIterator() as audio:
