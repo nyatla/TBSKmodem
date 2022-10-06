@@ -3,9 +3,11 @@ from cmath import atan
 from email.policy import default
 from secrets import choice
 from time import sleep
+from timeit import repeat
 from typing import Callable, Tuple
 import re
 from tqdm import tqdm
+import platform
 
 
 try:
@@ -14,9 +16,10 @@ except ModuleNotFoundError:
     import sys,os
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
     from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData,SoundDeviceInputIterator,SoundDeviceAudioPlayer,SinTone, TraitTone,__version__
-    print("Imported local library.")
+    is_local_library=True
 
 
+lprint=print
 
 
 # parser
@@ -153,7 +156,6 @@ class Demodulate(BaseCommand):
 
     def execute(self,args):
         # print(args)
-        lprint=(lambda *a,**k:()) if args.noinfo else print
 
         pcm:PcmData
         with open(args.src,"rb") as fp:
@@ -326,13 +328,12 @@ class Rx(BaseCommand):
         parser_add.add_argument('--file',default=False,help='Save to file as is.')
         parser_add.add_argument('--tone',default=None,help='Tone format or ticks.')
         parser_add.add_argument('--noinfo',action='store_true',help='Hide details other than results.')
-        parser_add.add_argument('--repeat',action='store_true',help='Repeat signal detection until interrupted.')
+        parser_add.add_argument('--norepeat',action='store_true',help='Do not repeat signal detection.')
         parser_add.set_defaults(handler=self)
         super().__init__(parser_add)
 
     def execute(self,args):
         # print(args)
-        lprint=(lambda *a,**k:()) if args.noinfo else print
 
 
 
@@ -369,6 +370,8 @@ class Rx(BaseCommand):
                         print(i,end="",flush=True)
                     print("")
                     lprint("No data" if c==0 else "End of signal.")
+                    if args.norepeat:
+                        break
             elif args.bin==True:
                 c=0
                 while True:
@@ -384,6 +387,8 @@ class Rx(BaseCommand):
                         print(bytes.hex(i),end="",flush=True)
                     print("")
                     lprint("No data" if c==0 else "End of signal.")
+                    if args.norepeat:
+                        break
             elif args.file!=False:
                 d=b""
                 while True:
@@ -399,6 +404,8 @@ class Rx(BaseCommand):
                         print(".",end="",flush=True)
                     print()
                     lprint("No data" if c==0 else "End of signal.")
+                    if args.norepeat:
+                        break
                 if len(d)>0:
                     with open(args.file,"wb") as fp:
                         fp.write(d)
@@ -415,11 +422,20 @@ def main():
     Demodulate(sp)
     Tx(sp)
     Rx(sp)
-    args = parser.parse_args()
+    args:argparse.Namespace = parser.parse_args()
     if args.version:
-        print("tbskmodem/"+__version__)
+        print(("tbskmodem/"+__version__+";"+sys.version+";"+platform.platform()).replace("\n",""))
     elif hasattr(args, 'handler'):
-        print(args.handler.execute(args))
+        global lprint
+        if "noinfo" in args and args.noinfo:
+            lprint=(lambda *a,**k:())
+        if is_local_library:
+            lprint("[WARN] Imported local library.")
+        if re.match(".*WSL.*",platform.release()) is not None:            
+            lprint("[WARN] Executed on WSL platform. Audio device may not work properly.")
+
+
+        args.handler.execute(args)
     else:
         parser.print_help()
 
@@ -427,6 +443,9 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+        exit(0)
+    except KeyboardInterrupt:
+        print("KeyboardInterrupt.")
         exit(0)
     except Exception as e:
         import traceback

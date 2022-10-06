@@ -125,7 +125,7 @@ class TraitBlockDecoder(IBitStream,IDecoder[IRoStream[float],int],BasicRoStream[
                     元ストリームの位置,検出値,平均値を取得したTickのサイズ
             """
             r=super().__new__(cls,v)
-            r._ext=ext[0] #
+            r._ext=ext #
             return r
         @property
         def pos(self)->int:
@@ -155,8 +155,10 @@ class TraitBlockDecoder(IBitStream,IDecoder[IRoStream[float],int],BasicRoStream[
         self._avefilter=AverageInterator[float](self._cof,ave_window)
         self._last_data=0
 
-        self._preload_size=self._trait_block_ticks+ave_window//2 #平均値フィルタの初期化サイズ。ave_window/2足してるのは、平均値の遅延分。
-        self._block_head_size=self._trait_block_ticks-1
+        self._preload_size=self._trait_block_ticks+ave_window//2-1    #平均値フィルタの初期化サイズ。ave_window/2足してるのは、平均値の遅延分.
+        self._block_skip_size=self._trait_block_ticks-1-2 #スキップ数
+        self._block_skip_counter=self._block_skip_size #スキップ数
+        self._samples=[] #観測値
         # try:
         #     [next(self._avefilter) for i in range(self._trait_block_ticks+ave_window//2)]
         # except StopIteration:
@@ -167,16 +169,48 @@ class TraitBlockDecoder(IBitStream,IDecoder[IRoStream[float],int],BasicRoStream[
         if self._is_eos:
             raise StopIteration()
         try:
+            #この辺の妙なカウンターはRecoverableStopInterationのため
+
+
             #平均イテレータの初期化(初めの一回目だけ)
             while self._preload_size>0:
                 next(self._avefilter)
                 self._preload_size=self._preload_size-1
             #ブロックヘッダの読み出し(1ブロック読出しごとにリセット)
-            while self._block_head_size>0:
+            while self._block_skip_counter>0:
                 next(self._avefilter)
-                self._block_head_size=self._block_head_size-1
-            r=next(self._avefilter)
-            self._block_head_size=self._trait_block_ticks-1 #リセット
+                self._block_skip_counter=self._block_skip_counter-1
+            while len(self._samples)<3:
+                self._samples.append(next(self._avefilter))
+
+
+
+
+            r=self._samples[1]
+            sample=self._samples
+            if sample[0]*sample[1]<0 or sample[1]*sample[2]<0:
+                #全ての相関値が同じ符号でなければ何もしない
+                self._block_skip_counter=self._block_skip_size #リセット
+            else:
+                #全ての相関値が同じ符号
+                samples=[abs(i) for i in self._samples]
+                #一番大きかったインデクスを探す
+                if samples[1]>samples[0] and samples[1]>samples[2]:
+                    #遅れも進みもしてない
+                    self._block_skip_counter=self._block_skip_size
+                    # print(0)
+                elif samples[0]>samples[2]:
+                    #探索場所が先行してる
+                    self._block_skip_counter=self._block_skip_size-1
+                    # print(-1)
+                else:
+                    #探索場所が遅行してる
+                    self._block_skip_counter=self._block_skip_size+1 
+                    # print(+1)
+
+
+
+            self._samples=[]
 
             # print(self._src.pos,r)
             th=self._threshold

@@ -13,7 +13,7 @@ import math
 def main():
     #save to sample
     carrier=8000
-    with SoundDeviceInputIterator(carrier,device_id=0) as stream:
+    with SoundDeviceInputIterator(carrier,device_id=None) as stream:
         scale=carrier//10
         print("Volume meter")
         print("",end="",flush=True)

@@ -26,7 +26,7 @@ def main():
     print("Start capturing")
     
     demod=TbskDemodulator(tone)
-    with SoundDeviceInputIterator(carrier,device_id=0) as stream:
+    with SoundDeviceInputIterator(carrier,device_id=None) as stream:
         while True:
             print(">",end="",flush=True)
             try:
