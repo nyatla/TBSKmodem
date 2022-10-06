@@ -13,6 +13,7 @@ def isinstances(args:any,types:Union[List[Type],Tuple[Type],Type],optional:Tuple
     optionalがある場合はキーワード引数の存在と、あれば型の一致判定を行います。
     isinstances(args,[int,int])
     isinstances(args,[int,int],(kwds,{"a":int,"b":str}))
+    isinstances(args,[int,[int,NoneType]],(kwds,{"a":int,"b":[str,int]}))
     """
     if isinstance(types,List) or isinstance(types,Tuple):
         ...
@@ -54,6 +55,9 @@ def isinstances(args:any,types:Union[List[Type],Tuple[Type],Type],optional:Tuple
                 continue
             else:
                 return False
+        elif isinstance(j,Sequence):
+            if True not in [isinstance(i,k) for k in j]:
+                return False
         elif not isinstance(i,j):
             return False
 
@@ -66,7 +70,10 @@ def isinstances(args:any,types:Union[List[Type],Tuple[Type],Type],optional:Tuple
         if k not in optional[1]:
             #知らない引数があれば対象外
             return False
-        if not isinstance(optional[0][k],optional[1][k]):
+        if isinstance(optional[1][k],Sequence):
+            if True not in [isinstance(optional[0][k],l) for l in optional[1][k]]:
+                return False
+        elif not isinstance(optional[0][k],optional[1][k]):
             return False
     return True
 
