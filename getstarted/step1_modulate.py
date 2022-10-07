@@ -1,13 +1,12 @@
 """ tbsk変調したWAVファイルを作ります。
 """
+import sys,os
 try:
     from tbskmodem import TbskModulator,XPskSinTone,PcmData
 except ModuleNotFoundError:
-    import sys,os
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
     from tbskmodem import TbskModulator,XPskSinTone,PcmData
-    print("Imported local library.")
-
+    print("[WARN] Imported local library.")
 
 def main():
     # tone=SinTone(10,10).mul(0.5)      # DPSK

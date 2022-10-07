@@ -1,12 +1,13 @@
 """ リアルタイムに文字列を受信するサンプルです。
 """
+import threading
+import sys,os
 try:
     from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData,SoundDeviceInputIterator
 except ModuleNotFoundError:
-    import sys,os
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
     from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData,SoundDeviceInputIterator
-    print("Imported local library.")
+    print("[WARN] Imported local library.")
 
 def main():
     #save to sample
@@ -27,15 +28,32 @@ def main():
     
     demod=TbskDemodulator(tone)
     with SoundDeviceInputIterator(carrier,device_id=None) as stream:
-        while True:
-            print(">",end="",flush=True)
+        def checkInput():
+            print("Press [ENTER] to stop.")
             try:
-                s=demod.demodulateAsStr(stream)
-            except StopIteration:
-                break
-            for i in s:
-                print(i,end="",flush=True)
-            print("\nTerminated.")
+                input()
+            except EOFError:
+                pass
+            finally:
+                stream.close()
+        th=threading.Thread(target=checkInput)
+        th.start() 
+        try:
+            while True:
+                print(">",end="",flush=True)
+                try:
+                    s=demod.demodulateAsStr(stream)
+                except StopIteration:
+                    raise
+                for i in s:
+                    print(i,end="",flush=True)
+                print("\nEnd of signal.")
+        except StopIteration:
+            pass
+        except KeyboardInterrupt:
+            print("\nInterrupted.")
+        finally:
+            th.join()
 
 
 if __name__ == "__main__":
