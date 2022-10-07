@@ -78,7 +78,7 @@ class RingBuffer(Generic[T]):
             self._buf= b[self._p:]+b[:self._p]
         self._p=0
         return self._buf[s]
-        ...
+
     def __len__(self)->int:
         return len(self._buf)
     def __repr__(self)->str:

@@ -83,7 +83,7 @@ class TbskModulator:
         self._tone=tone
         self._preamble=preamble if preamble is not None else CoffPreamble(self._tone)
         self._enc=TraitBlockEncoder(tone)
-        ...
+        
     def modulateAsBit(self,src:Union[Iterable[int],Iterator[int]])->Iterator[float]:
         ave_window_shift=max(int(len(self._tone)*0.1),2)//2 #検出用の平均フィルタは0.1*len(tone)//2だけずれてる。ここを直したらTraitBlockDecoderも直せ
 

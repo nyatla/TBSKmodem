@@ -12,7 +12,7 @@ class MSequence(Iterator[int]):
         self._tap=tap if tap is not None else bits-2 #タップビット位置
         self._mask=(2**bits-1)
         self._sr=sr&self._mask
-        ...
+        
     def __next__(self)->int:
         b=self._bits
         t=self._tap

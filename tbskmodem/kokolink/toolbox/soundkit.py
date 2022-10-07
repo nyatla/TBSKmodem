@@ -28,7 +28,7 @@ class SoundKit:
                 try:
                     ret.append([i for i in stream])
                 finally:
-                    ...
+                    pass
             th=Thread(target=proc)
             th.start()
             sleep(silence[0])

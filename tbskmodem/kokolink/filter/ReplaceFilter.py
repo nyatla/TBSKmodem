@@ -92,7 +92,7 @@ class ReplaceFilter(IFilter[IRoStream[T],Sequence[T]],BasicRoStream[Sequence[T]]
                 pack_len=len(self._index_seq)
                 r=self._src.gets(pack_len)
                 if len(r)==pack_len:
-                    ...
+                    pass
                 else:
                     # r=r+[cmath.rect(1,cmath.pi/16*i)for i in range(pack_len-len(r))]
                     r=r+tuple([next(self._pad)]*(pack_len-len(r)))

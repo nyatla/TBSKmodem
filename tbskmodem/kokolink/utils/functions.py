@@ -16,7 +16,7 @@ def isinstances(args:any,types:Union[List[Type],Tuple[Type],Type],optional:Tuple
     isinstances(args,[int,[int,NoneType]],(kwds,{"a":int,"b":[str,int]}))
     """
     if isinstance(types,List) or isinstance(types,Tuple):
-        ...
+        pass
     else:
         types=[types]
 

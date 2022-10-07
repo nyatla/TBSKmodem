@@ -53,7 +53,7 @@ class TraitBlockEncoder(IEncoder[IBitStream,int],BasicRoStream[float]):
     @overload
     def __init__(self,tone:TraitTone):
         ...
-        ...
+
     def __init__(self,*args,**kwds):
         self._sblock:Tuple[int]
         self._btone:TraitTone
@@ -198,7 +198,7 @@ class TraitBlockDecoder(IBitStream,IDecoder[IRoStream[float],int],BasicRoStream[
                 #一番大きかったインデクスを探す
                 if samples[1]>samples[0] and samples[1]>samples[2]:
                     #遅れも進みもしてない
-                    ...
+                    pass
                 elif samples[0]>samples[2]:
                     #探索場所が先行してる
                     self._shift=self._shift-1
@@ -207,7 +207,7 @@ class TraitBlockDecoder(IBitStream,IDecoder[IRoStream[float],int],BasicRoStream[
                     self._shift=self._shift+1
                 else:
                     #不明
-                    ...
+                    pass
 
                 if self._shift>10:
                     self._shift=0

@@ -243,7 +243,7 @@ class RawListChunk(ChunkHeader):
             super().__init__(b"LIST",size,form)
             self._payload=fp.read(size)
         if len(args)==2:
-            ...
+            pass
             # __init__1(self,*args)
         elif len(args)==3:
             __init__3(self,*args)
