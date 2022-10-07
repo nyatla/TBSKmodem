@@ -1,19 +1,16 @@
 import argparse
-from cmath import atan
-from email.policy import default
-from secrets import choice
+
 from time import sleep
-from timeit import repeat
-from typing import Callable, Tuple
 import re
 from tqdm import tqdm
 import platform
+import sys,os
 
+is_local_library=False
 
 try:
     from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData,SoundDeviceInputIterator,SoundDeviceAudioPlayer,SinTone, TraitTone,__version__
 except ModuleNotFoundError:
-    import sys,os
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
     from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData,SoundDeviceInputIterator,SoundDeviceAudioPlayer,SinTone, TraitTone,__version__
     is_local_library=True
@@ -24,8 +21,8 @@ lprint=print
 
 # parser
 
-def hexstr2int(src:str)->Tuple[int]:
-    return bytes.fromhex(src)
+
+
 def inputstr(message:str)->str:
     print(message)
     return input()
@@ -67,7 +64,7 @@ class Modulate(BaseCommand):
     def __init__(self,subparsers:argparse.ArgumentParser):
         parser_add = subparsers.add_parser('mod',formatter_class=argparse.RawDescriptionHelpFormatter,
         description=
-        "Moduleate text or binary to wavefile.",
+        "Moduleate text or hex string or binary to wavefile.",
         epilog=
         "Example:\n"
         "  $tbskmodem mod susi.wav\n"
@@ -76,18 +73,18 @@ class Modulate(BaseCommand):
         "    Modulate command line text to tempura.wav\n"
         "  $tbskmodem mod tempura.wav --text tempura --carrier 48000\n"
         "    Modulate command line text to tempura.wav with specified carrier frequency.\n"
-        "  $tbskmodem mod beef.wav --bin 00beef\n"
-        "    Modulate command line hextext to tempura.wav\n"
+        "  $tbskmodem mod beef.wav --hex 00beef\n"
+        "    Modulate command line hex string to beef.wav as binary.\n"
         "  $tbskmodem mod sabakan.wav --file sabakan.txt\n"
-        "    Modulate file contents to tempura.wav in binary.\n",
+        "    Modulate file contents to sabakan.wav in binary.\n",
         help='see `$tbskmodem mod -h`')
         parser_add.add_argument('out',type=str,help='Output wave file name.')
         parser_add.add_argument('--carrier',type=int,default=16000,help='Carrier frequency.')
         parser_add.add_argument('--sample_bits',type=int,choices=[8,16],default=16,help='Sampling bit width.')
-        parser_add.add_argument('--tone',type=str,default="xpsk:10,10",help='Trait tone format."xpsk:int,int(,int)" | "sin:int:int"')
+        parser_add.add_argument('--tone',type=str,default="xpsk:10,10",help='Trait tone format."xpsk:int,int(,int)" | "sin:int,int"')
         parser_add.add_argument('--silence',type=float,default=0.5,help='Silence padding time in sec')
         parser_add.add_argument('--text',type=str,nargs="?" ,default=None,const="",help='Text format input.')
-        parser_add.add_argument('--bin',type=str,nargs="?" ,default=None,const="",help='Hex text format input.')
+        parser_add.add_argument('--hex',type=str,nargs="?" ,default=None,const="",help='Hex text format input.')
         parser_add.add_argument('--file',type=str,default=None,help='File input')
         parser_add.set_defaults(handler=self)
         super().__init__(parser_add)
@@ -98,16 +95,16 @@ class Modulate(BaseCommand):
         tone=str2tone(args.tone)    # SSFM DPSK
         mod=TbskModulator(tone)
         #入力値の判定
-        numoffmt=3-[args.text,args.bin,args.file].count(None)
+        numoffmt=3-[args.text,args.hex,args.file].count(None)
         if numoffmt>1:
-            raise RuntimeError("Must be set text,bin,file parameter in exclusive.")
+            raise RuntimeError("Must be set text,hex,file parameter in exclusive.")
         src_pcm=None
         if numoffmt==0 or args.text is not None:
             src=inputstr("input string>") if numoffmt==0 or len(args.text)==0 else args.text
             src_pcm=[i for i in mod.modulate(src)]
-        elif args.bin is not None:
-            src=inputstr("input hex string>") if len(args.bin)==0 else args.bin
-            src_pcm=[i for i in mod.modulate(hexstr2int(src))]
+        elif args.hex is not None:
+            src=inputstr("input hex string>") if len(args.hex)==0 else args.hex
+            src_pcm=[i for i in mod.modulateAsHexStr(src)]
         elif args.file is not None:
             with open(args.file,"rb") as fp:
                 src_pcm=[i for i in mod.modulate(fp.read())]
@@ -133,21 +130,21 @@ class Demodulate(BaseCommand):
     def __init__(self,subparsers:argparse.ArgumentParser):
         parser_add = subparsers.add_parser('dem',formatter_class=argparse.RawDescriptionHelpFormatter,
         description=
-        "Demoduleate wavefile to text or binary.",
+        "Demoduleate wavefile to text or hex string or file.",
         epilog=
         "Example:\n"
         "  $tbskmodem dem susi.wav\n"
         "    Demodulate susi.wav with default parameter and print as text format.\n"        
-        "  $tbskmodem dem tempura.wav --bin\n"
-        "    Demodulate tempura.wav with default parameter and show as hex text format.\n"
+        "  $tbskmodem dem tempura.wav --hex\n"
+        "    Demodulate tempura.wav with default parameter and show as hex string format.\n"
         "  $tbskmodem dem tonkatu.wav --text --tone 100\n"
-        "    Demodulate tonkatu.wav with specified tone ticks and print as text format.\n"
+        "    Demodulate tonkatu.wav with specified tone ticks and print as string format.\n"
         "  $tbskmodem dem yakitori.wav --file umai.txt\n"
-        "    Demodulate yakitori.wav and save to file.\n",
+        "    Demodulate yakitori.wav and save to umai.txt.\n",
         help='see `$tbskmodem dem -h`')
         parser_add.add_argument('src',type=str,help='Input wave file name.')
         parser_add.add_argument('--text',action='store_true',help='Show in text.')
-        parser_add.add_argument('--bin',action='store_true',help='Show in hex text.')
+        parser_add.add_argument('--hex',action='store_true',help='Show in hex string.')
         parser_add.add_argument('--file',default=False,help='Save to file as is.')
         parser_add.add_argument('--tone',default=None,help='Tone format or ticks.')
         parser_add.add_argument('--noinfo',action='store_true',help='Hide details other than results.')
@@ -172,53 +169,52 @@ class Demodulate(BaseCommand):
 
         lprint("Start detection.")
 
-        numoffmt=3-[args.text,args.bin,args.file].count(False)
+        numoffmt=3-[args.text,args.hex,args.file].count(False)
         if numoffmt>1:
-            raise RuntimeError("Must be set text,bin,file parameter in exclusive.")
+            raise RuntimeError("Must be set text,hex,file parameter in exclusive.")
         if numoffmt==0 or args.text==True:
             c=0
-            while True:
-                try:
+            try:
+                while True:
                     n=demod.demodulateAsStr(isrc)
                     lprint("Preamble found.")
-                except StopIteration:
-                    break
-                # print("RX>",end="",flush=True)
-                for i in n:
-                    c=c+1
-                    print(i,end="",flush=True)
-                print()
-                lprint("No data" if c==0 else "End of signal.")
-        elif args.bin==True:
+                    # print("RX>",end="",flush=True)
+                    for i in n:
+                        c=c+1
+                        print(i,end="",flush=True)
+                    print()
+                    lprint("No data" if c==0 else "End of signal.")
+            except StopIteration:
+                lprint("End of stream.")
+        elif args.hex==True:
             c=0
-            while True:
-                try:
-                    n=demod.demodulateAsBytes(isrc)
+            try:
+                while True:
+                    n=demod.demodulateAsHexStr(isrc)
                     lprint("Preamble found.")
-                except StopIteration:
-                    lprint("End of stream.")
-                    break
-                # print("RX>",end="",flush=True)
-                for i in n:
-                    c=c+1
-                    print(bytes.hex(i),end="",flush=True)
-                print()
-                lprint("No data" if c==0 else "End of signal.")
+                    # print("RX>",end="",flush=True)
+                    for i in n:
+                        c=c+1
+                        print(i,end="",flush=True)
+                    print()
+                    lprint("No data" if c==0 else "End of signal.")
+            except StopIteration:
+                lprint("End of stream.")
         elif args.file!=False:
+            c=0
             d=b""
-            while True:
-                try:
+            try:
+                while True:
                     n=demod.demodulateAsBytes(isrc)
                     lprint("Preamble found.")
                     c=c+1
-                except StopIteration:
-                    lprint("End of stream.")
-                    break
-                for i in n:
-                    d=d+i
-                    print(".",end="",flush=True)
-                print()
-                lprint("No data" if c==0 else "End of signal.")
+                    for i in n:
+                        d=d+i
+                        print(".",end="",flush=True)
+                    print()
+                    lprint("No data" if c==0 else "End of signal.")
+            except StopIteration:
+                lprint("End of stream.")
             if len(d)>0:
                 with open(args.file,"wb") as fp:
                     fp.write(d)
@@ -231,7 +227,7 @@ class Tx(BaseCommand):
     def __init__(self,subparsers:argparse.ArgumentParser):
         parser_add = subparsers.add_parser('tx',formatter_class=argparse.RawDescriptionHelpFormatter,
         description=
-        "Transmit text or binary by audio device as TBSK modulation.",
+        "Transmit text or hex string or file to audio device as TBSK modulation.",
         epilog=
         "Example:\n"
         "  $tbskmodem tx\n"
@@ -240,19 +236,19 @@ class Tx(BaseCommand):
         "    Send command line text\n"
         "  $tbskmodem tx --text tempura --carrier 48000\n"
         "    Send command line text with specified carrier frequency.\n"
-        "  $tbskmodem tx --bin 00beef\n"
-        "    Send command line hex text\n"
+        "  $tbskmodem tx --hex 00beef\n"
+        "    Send command line hex string\n"
         "  $tbskmodem tx --file sabakan.txt\n"
         "    Send file contents in binary.\n",
         help='see `$tbskmodem mod -h`')
         parser_add.add_argument('--carrier',type=int,default=16000,help='Carrier frequency.')
         parser_add.add_argument('--sample_bits',type=int,choices=[8,16],default=16,help='Sampling bit width.')
         parser_add.add_argument('--device',type=int,default=None,help='Audio device id')
-        parser_add.add_argument('--tone',type=str,default="xpsk:10,10",help='Trait tone format."xpsk:int,int(,int)" | "sin:int:int"')
+        parser_add.add_argument('--tone',type=str,default="xpsk:10,10",help='Trait tone format."xpsk:int,int(,int)" | "sin:int,int"')
         parser_add.add_argument('--silence',type=float,default=0.5,help='Silence padding time in sec')
         parser_add.add_argument('--volume',type=float,default="1.0",help='Volume multiplyer 0 to 1.0')
         parser_add.add_argument('--text',type=str,nargs="?" ,default=None,const="",help='Text format input.')
-        parser_add.add_argument('--bin',type=str,nargs="?" ,default=None,const="",help='Hex text format input.')
+        parser_add.add_argument('--hex',type=str,nargs="?" ,default=None,const="",help='Hex string format input.')
         parser_add.add_argument('--file',type=str,default=None,help='File input')
         parser_add.set_defaults(handler=self)
         super().__init__(parser_add)
@@ -263,16 +259,16 @@ class Tx(BaseCommand):
         tone=str2tone(args.tone).mul(max(0,min(1,args.volume)))    # SSFM DPSK
         mod=TbskModulator(tone)
         #入力値の判定
-        numoffmt=3-[args.text,args.bin,args.file].count(None)
+        numoffmt=3-[args.text,args.hex,args.file].count(None)
         if numoffmt>1:
-            raise RuntimeError("Must be set text,bin,file parameter in exclusive.")
+            raise RuntimeError("Must be set text,hex,file parameter in exclusive.")
         src_pcm=None
         if numoffmt==0 or args.text is not None:
             src=inputstr("input string>") if numoffmt==0 or len(args.text)==0 else args.text
             src_pcm=[i for i in mod.modulate(src)]
-        elif args.bin is not None:
-            src=inputstr("input hex string>") if len(args.bin)==0 else args.bin
-            src_pcm=[i for i in mod.modulate(hexstr2int(src))]
+        elif args.hex is not None:
+            src=inputstr("input hex string>") if len(args.hex)==0 else args.hex
+            src_pcm=[i for i in mod.modulateAsHexStr(src)]
         elif args.file is not None:
             with open(args.file,"rb") as fp:
                 src_pcm=[i for i in mod.modulate(fp.read())]
@@ -308,13 +304,13 @@ class Rx(BaseCommand):
     def __init__(self,subparsers:argparse.ArgumentParser):
         parser_add = subparsers.add_parser('rx',formatter_class=argparse.RawDescriptionHelpFormatter,
         description=
-        "Receive TBSK siglanfrom audio device.",
+        "Receive TBSK siglan from audio device.",
         epilog=
         "Example:\n"
         "  $tbskmodem dem susi.wav\n"
         "    Receive TBSK signal with default parameter and print as text format.\n"        
-        "  $tbskmodem dem tempura.wav --bin\n"
-        "    Receive TBSK signal with default parameter and show as hex text format.\n"
+        "  $tbskmodem dem tempura.wav --hex\n"
+        "    Receive TBSK signal with default parameter and show as hex string format.\n"
         "  $tbskmodem dem tonkatu.wav --text --tone 100\n"
         "    Receive TBSK siginal with specified tone ticks and print as text format.\n"
         "  $tbskmodem dem yakitori.wav --file umai.txt\n"
@@ -324,7 +320,7 @@ class Rx(BaseCommand):
         parser_add.add_argument('--sample_bits',type=int,choices=[8,16],default=16,help='Sampling bit width.')
         parser_add.add_argument('--device',type=int,default=None,help='Audio device id')
         parser_add.add_argument('--text',action='store_true',help='Show in text.')
-        parser_add.add_argument('--bin',action='store_true',help='Show in hex text.')
+        parser_add.add_argument('--hex',action='store_true',help='Show in hex string.')
         parser_add.add_argument('--file',default=False,help='Save to file as is.')
         parser_add.add_argument('--tone',default=None,help='Tone format or ticks.')
         parser_add.add_argument('--noinfo',action='store_true',help='Hide details other than results.')
@@ -347,65 +343,72 @@ class Rx(BaseCommand):
         demod=TbskDemodulator(tone)
         with SoundDeviceInputIterator(args.carrier,device_id=args.device,bits_par_sample=args.sample_bits) as isrc:
 
-        # src=pcm.dataAsFloat()
-        # isrc=iter(src)
+            def checkInput():
+                print("Press [ENTER] to stop.")
+                try:
+                    input()
+                except EOFError:
+                    pass
+                finally:
+                    isrc.close()
+
 
             lprint("Start detection.")
 
-            numoffmt=3-[args.text,args.bin,args.file].count(False)
+            numoffmt=3-[args.text,args.hex,args.file].count(False)
             if numoffmt>1:
-                raise RuntimeError("Must be set text,bin,file parameter in exclusive.")
+                raise RuntimeError("Must be set text,hex,file parameter in exclusive.")
             if numoffmt==0 or args.text==True:
                 c=0
-                while True:
-                    try:
+                try:
+                    while True:
                         n=demod.demodulateAsStr(isrc)
                         lprint("Preamble found.")
-                    except StopIteration:
-                        lprint("End of stream.")
-                        break
-                    # print("RX>",end="",flush=True)
-                    for i in n:
-                        c=c+1
-                        print(i,end="",flush=True)
-                    print("")
-                    lprint("No data" if c==0 else "End of signal.")
-                    if args.norepeat:
-                        break
-            elif args.bin==True:
+                        # print("RX>",end="",flush=True)
+                        for i in n:
+                            c=c+1
+                            print(i,end="",flush=True)
+                        print("")
+                        lprint("No data" if c==0 else "End of signal.")
+                        if args.norepeat:
+                            break
+                except StopIteration:
+                    lprint("End of stream.")
+
+            elif args.hex==True:
                 c=0
-                while True:
-                    try:
-                        n=demod.demodulateAsBytes(isrc)
+                try:
+                    while True:
+                        n=demod.demodulateAsHexStr(isrc)
                         lprint("Preamble found.")
-                    except StopIteration:
-                        lprint("End of stream.")
-                        break
-                    # print("RX>",end="",flush=True)
-                    for i in n:
-                        c=c+1
-                        print(bytes.hex(i),end="",flush=True)
-                    print("")
-                    lprint("No data" if c==0 else "End of signal.")
-                    if args.norepeat:
-                        break
+                        # print("RX>",end="",flush=True)
+                        for i in n:
+                            c=c+1
+                            print(i,end="",flush=True)
+                        print("")
+                        lprint("No data" if c==0 else "End of signal.")
+                        if args.norepeat:
+                            break
+                except StopIteration:
+                    lprint("End of stream.")
+
             elif args.file!=False:
+                c=0                
                 d=b""
-                while True:
-                    try:
+                try:
+                    while True:
                         n=demod.demodulateAsBytes(isrc)
                         lprint("Preamble found.")
                         c=c+1
-                    except StopIteration:
-                        lprint("End of stream.")
-                        break
-                    for i in n:
-                        d=d+i
-                        print(".",end="",flush=True)
-                    print()
-                    lprint("No data" if c==0 else "End of signal.")
-                    if args.norepeat:
-                        break
+                        for i in n:
+                            d=d+i
+                            print(".",end="",flush=True)
+                        print()
+                        lprint("No data" if c==0 else "End of signal.")
+                        if args.norepeat:
+                            break
+                except StopIteration:
+                    lprint("End of stream.")
                 if len(d)>0:
                     with open(args.file,"wb") as fp:
                         fp.write(d)
@@ -415,39 +418,39 @@ class Rx(BaseCommand):
             return
 
 def main():
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,prog="tbskmodem")
-    sp=parser.add_subparsers()
-    parser.add_argument('--version',"-V",action="store_true",help='print version')
-    Modulate(sp)
-    Demodulate(sp)
-    Tx(sp)
-    Rx(sp)
-    args:argparse.Namespace = parser.parse_args()
-    if args.version:
-        print(("tbskmodem/"+__version__+";"+sys.version+";"+platform.platform()).replace("\n",""))
-    elif hasattr(args, 'handler'):
-        global lprint
-        if "noinfo" in args and args.noinfo:
-            lprint=(lambda *a,**k:())
-        if is_local_library:
-            lprint("[WARN] Imported local library.")
-        if re.match(".*WSL.*",platform.release()) is not None:            
-            lprint("[WARN] Executed on WSL platform. Audio device may not work properly.")
-
-
-        args.handler.execute(args)
-    else:
-        parser.print_help()
-
-
-if __name__ == "__main__":
+    global is_local_library
     try:
-        main()
-        exit(0)
+        parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,prog="tbskmodem")
+        sp=parser.add_subparsers()
+        parser.add_argument('--version',"-V",action="store_true",help='print version')
+        Modulate(sp)
+        Demodulate(sp)
+        Tx(sp)
+        Rx(sp)
+        args:argparse.Namespace = parser.parse_args()
+        if args.version:
+            print(("tbskmodem/"+__version__+";"+sys.version+";"+platform.platform()).replace("\n",""))
+        elif hasattr(args, 'handler'):
+            global lprint
+            if "noinfo" in args and args.noinfo:
+                lprint=(lambda *a,**k:())
+            if is_local_library:
+                lprint("[WARN] Imported local library.")
+            if re.match(".*WSL.*",platform.release()) is not None:            
+                lprint("[WARN] Executed on WSL platform. Audio device may not work properly.")
+            if re.match(".*conda.*",sys.version) is not None:            
+                lprint("[WARN] Executed by conda build. Ctrl^C may not work. Use Ctrl^D or Break(Ctrl^[PAUSE]) instead")
+
+
+            args.handler.execute(args)
+        else:
+            parser.print_help()
     except KeyboardInterrupt:
         print("KeyboardInterrupt.")
-        exit(0)
     except Exception as e:
         import traceback
-        traceback.print_exception(e)
+        traceback.print_exc()
         exit(-1)
+
+if __name__ == "__main__":
+    main()
