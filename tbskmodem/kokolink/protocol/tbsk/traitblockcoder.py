@@ -159,6 +159,7 @@ class TraitBlockDecoder(IBitStream,IDecoder[IRoStream[float],int],BasicRoStream[
         self._block_skip_size=self._trait_block_ticks-1-2 #スキップ数
         self._block_skip_counter=self._block_skip_size #スキップ数
         self._samples=[] #観測値
+        self._shift=0
         # try:
         #     [next(self._avefilter) for i in range(self._trait_block_ticks+ave_window//2)]
         # except StopIteration:
@@ -197,17 +198,27 @@ class TraitBlockDecoder(IBitStream,IDecoder[IRoStream[float],int],BasicRoStream[
                 #一番大きかったインデクスを探す
                 if samples[1]>samples[0] and samples[1]>samples[2]:
                     #遅れも進みもしてない
-                    self._block_skip_counter=self._block_skip_size
-                    # print(0)
+                    ...
                 elif samples[0]>samples[2]:
                     #探索場所が先行してる
-                    self._block_skip_counter=self._block_skip_size-1
-                    # print(-1)
-                else:
+                    self._shift=self._shift-1
+                elif samples[0]<samples[2]:
                     #探索場所が遅行してる
-                    self._block_skip_counter=self._block_skip_size+1 
-                    # print(+1)
+                    self._shift=self._shift+1
+                else:
+                    #不明
+                    ...
 
+                if self._shift>10:
+                    self._shift=0
+                    # print(1)
+                    self._block_skip_counter=self._block_skip_size+1
+                elif self._shift<-10:
+                    self._shift=0
+                    # print(-1)
+                    self._block_skip_counter=self._block_skip_size-1
+                else:
+                    self._block_skip_counter=self._block_skip_size
 
 
             self._samples=[]
