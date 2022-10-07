@@ -20,9 +20,10 @@ packages = ["tbskmodem","tbskmodem_apps"]
 python = "^3.8"
 
 dependencies = [
-    "tqdm~=4.20"
+    "tqdm~=4.20",
+    "sounddevice~=0.4.5"
 ]
 
 
 [project.scripts]
-"tbskmodem.py" = "tbskmodem_apps.tbskmodem:main"
+"tbskmodem" = "tbskmodem_apps._tbskmodem:main"

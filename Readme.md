@@ -28,37 +28,37 @@ TBSK (Trait Block Shift Keying) modemは、FFT/IFTTを使わない、低速、�
 TBSKでは、波形シンボルの代わりにスペクトラム拡散した任意形状トーン信号とその反転値を伝送シンボルに使います。
 隣接するシンボルの相関値は1,-1を取るので、これを差動変調して伝送します。
 
+この伝送方式のパラメータは、トーン信号長(Tick数×搬送波周波数)のみです。トーン信号長だけ適合していれば、同一な復調器で信号の形式によらず復調することができます。
+
 ### 信号同期
 
-信号の検出と同期は、相関値を一定時間観測して判定します。信号の先端には通常のシンボルよりも長い同期パターンを配置します。
+信号の検出は、相関値を一定時間観測して判定します。信号の先端には通常のシンボルよりも長い同期パターンを配置します。
+同期は初期の同期シンボル検知のほか、シンボル反転時の相関ピークを検出します。
+搬送波の安定しないシステムでシンボルが長時間反転しない信号を送ると、同期が取れずにストリームが中断します。
+数秒に一度はデータが反転するように送信するデータを加工してください。
 
 ### トーン信号
 
-トーン信号は受信機でS/N比が高い形状であれば何でも構いません。搬送周波数だけ適合していれば、異なるトーン信号で変調しても復調することができます。
-トーン信号にサイン波を使用すると、DPSK変調と同じ動作をします。
+標準のトーン信号は、Sin波をPN符号で位相シフトしたスペクトラム拡散波形です。
+トーン信号は受信機でS/N比が高い形状であれば何でも構いません。トーン信号にサイン波を使用すると、DPSK変調と同じ動作をします。
 
 ### 外乱耐性
 
 トーン信号が長いほど外乱耐性は強くなりますが、トーン信号が長くなるほどビットレートは低下します。
 搬送波周波数に対する最大通信レートの理論値は1bit/Hzです。実際には0.01bit/Hzが目安となります。
 
+トーン信号は、線路媒体の特性に合わせて、時間方向、周波数方向に拡散（帯域の無駄遣い）ができます。
+
 
 ### パケット仕様
 現状のプロトコルは、開始点検出とそれに続くペイロード読出しのみを実装しています。パケットサイズや終端識別子、エラー訂正、検出についてはアプリケーションで実装してください。
 
-
-
-
-
-
 ## ライセンス
 
 本ソフトウェアは、MITライセンスで提供します。ホビー・研究用途では、MITライセンスに従って適切に運用してください。
-産業用途では、特許の取り扱いに注意してください。
+産業用途では、特許の取り扱いに注意してください。ありきたりな通信システムですから、きっと誰かが特許を持っています。
 
 このライブラリはMITライセンスのオープンソースソフトウェアですが、特許フリーではありません。
-
-
 
 
 
@@ -70,7 +70,7 @@ Anacondaの利用を前提として説明します。Pythonのバージョンは
 ソースコードをgithubからcloneします。
 
 ```
-git clone https://github.com/nyatla/TBSKmodem.git
+>git clone https://github.com/nyatla/TBSKmodem.git
 ```
 
 step4までは外部モジュールは不要です。
@@ -78,8 +78,8 @@ step4より先に進むならば、numpy,sounddeviceをインストールして�
 サウンドの再生やキャプチャに必要です。
 
 ```
-conda install -c anaconda numpy
-conda install -c conda-forge python-sounddevice
+>conda install -c anaconda numpy
+>conda install -c conda-forge python-sounddevice
 ```
 
 ※代替としてpyaudioを利用する場合は、キャプチャのみ対応します。
@@ -94,25 +94,71 @@ step1.modulate.pyは、ビット値を変調することができます。
 
 ```
 > python step1_modulate.py
+Imported local library.
+[WARN] Imported local library.
+>
+```
+このスクリプトは変調した振幅信号をwavファイルに保存します。
+出力ファイル名は、step1.wavです。
+
+`[WARN] Imported local library.`と表示されましたか？心配は不要です。
+この表示は、ライブラリではなく、ローカルディレクトリにあるtbskmodemパッケージをリンクした時に表示されるメッセージです。
+
+メイン関数を見てみましょう。
+```
+def main():
+    # tone=SinTone(10,10).mul(0.5)      # DPSK
+    tone=XPskSinTone(10,10).mul(0.5)    # SSFM DPSK
+    payload=[0,1,0,1,0,1,0,1]*16 # 16byte
+    carrier=8000
+
+    #modulation
+    mod=TbskModulator(tone)
+    src_pcm=[i for i in mod.modulateAsBit(payload)]
+
+    #save to wave
+    with open("step1.wav","wb") as fp:
+        PcmData.dump(PcmData(src_pcm,16,carrier),fp)
 ```
 
-このスクリプトは変調した振幅信号をwavファイルに保存します。
-ファイル名は、step1.wavです。
+このスクリプトは、まず伝送シンボルに相当するXPskSinToneオブジェクトを生成します。
+次に、変調器のTbskModulatorオブジェクトを生成して、modulateAsBit関数で変調します。
+変調するのはビット値(1 or 0)の配列で、合計8*16=128ビットです。
 
-modulateAsBit関数は、ビット値(1 or 0)の配列を変調した振幅値を返すイテレータを生成します。
-
+modulateAsBit関数の戻り値は、変調した振幅値(float)を返すイテレータです。これをリストにして、最後にWaveファイルにして保存します。
 
 #### step2. wavファイルの復調
 
 step2.modulate.pyは、作成したwavファイルを元のビット列に戻します。
 ```
 > python step2_demodulate.py
+[WARN] Imported local library.
+[0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1]
+>
 ```
-
 当然のように、元のビット列に戻るはずです。
 
-demodulateAsBit関数は1ビットの値を受信した順に返すイテレータを生成します。
-信号が成立しなくなるまで値をビット値を返し続けます。(信号終端についての疑問はここでは一旦忘れます。)
+メイン関数を見てみましょう。
+```
+def main():
+    wav=None
+    with open("step1.wav","rb") as fp:
+        wav=PcmData.load(fp)
+
+    # tone=SinTone(20,8)
+    tone=XPskSinTone(10,10)
+    demod=TbskDemodulator(tone)
+
+    ret=demod.demodulateAsBit(wav.dataAsFloat())
+    print([i for i in ret])
+```
+信号を格納したWaveファイルはstep1で作成したstep1.wavです。これを読み出します。
+次にトーン信号を作り、そこから復調器のTbskDemodulatorを作り、demodulateAsBit関数で復調します。
+
+demodulateAsBit関数はビット列をintで返すイテレータです。これをリストにして表示します。
+
+
+イテレータは信号が成立しなくなるまで値をビット値を返し続けます。(信号終端についての疑問はここでは一旦忘れます。)
 
 
 #### step3. バイトデータの変調と復調
@@ -121,32 +167,95 @@ demodulateAsBit関数は1ビットの値を受信した順に返すイテレー�
 step3_bytedata.pyは、bytes値の変調と復調を実行します。
 
 ```
-> python step3_bytedata.py
+> python .\step3_bytedata.py
+[WARN] Imported local library.
+[b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9']
+> 
 ```
 
-入力は連続するbytes値なのに、戻り値は1bytesづつに分割されたbytes型で得られる点に注意してください
+メイン関数を見てみましょう。
 
-#### step4. バイトデータの変調と復調
+```
+def main():
+    tone=XPskSinTone(10,10).mul(0.5)    # SSFM DPSK
+    payload=b"0123456789" # 10byte
+    carrier=8000
+
+    #modulation
+    mod=TbskModulator(tone)
+    src_pcm=[i for i in mod.modulate(payload)]
+
+    #save to wave
+    wav=PcmData(src_pcm,16,carrier)
+    with open("step3.wav","wb") as fp:
+        PcmData.dump(wav,fp)
+
+    #demodulate to bytes
+    demod=TbskDemodulator(tone)
+    ret=demod.demodulateAsBytes(wav.dataAsFloat())
+    print([i for i in ret])
+```
+
+step1とstep2を合体したような構造です。
+mod.modulate関数に注目してください。ここで、payloadにbytesをそのまま渡しています。
+そして、demod.demodulateAsBytesにも注目してください。データを渡すと、Bytesにして返してくれそうな関数です。
+
+入力は連続するbytes値なのに戻り値が1byte単位のbytes型なのは不自然な気もしますが、そういうものです。
+
+#### step4. 文字列の変調と復調
 
 step4_text.pyは、文字列の変調と復調を実行します。
 
 ```
-> python step4_text.py
+> python .\step4_text.py    
+[WARN] Imported local library.
+['ア', 'ン', 'タ', 'ヤ', 'ル', 'ー', 'ニ', 'ャ']
+PS D:\project.public\TbskModem\getstarted>
+>
 ```
-step4_text.pyとstep3_bytedata.pyは、同じmodulete関数で変調していることに注目してください。
-modulete関数には、3種類(Iterableも入れるなら4種類)のオーバライド関数があります。
+メイン関数を見てみましょう。とはいえ、step3とほとんど変わりません。
 
-byte範囲のint値配列,bytes,strを引数にそのまま指定できるので便利です。
+```
+def main():
+    tone=XPskSinTone(10,10).mul(0.5)    # SSFM DPSK
+    payload="アンタヤルーニャ"
+    carrier=8000
+
+    #modulation
+    mod=TbskModulator(tone)
+    wav=PcmData([i for i in mod.modulate(payload)],16,carrier)
+    #save to wave
+    with open("step4.wav","wb") as fp:
+        PcmData.dump(wav,fp)
+
+    #demodulate to bytes
+    demod=TbskDemodulator(tone)
+    ret=demod.demodulateAsStr(wav.dataAsFloat())
+    print([i for i in ret])
+```
+変調部分はmod.modulateそのままです。
+関数呼び出しの変更点は、復調部分でdemodulateAsStr関数が使われているところです。
+
+変調器と復調器は、それぞれ、bit配列,文字列,Hex string,bytes,uint8配列を引数に取る関数があります。
+勘の良い読者の方は気が付いたかもしれませんが、Hex stringはブロックチェーンネットワークのトランザクションを送信するための機能です。
+
+イーサリウムネットワークにトランザクションをブリッジするためのサンプルはこちらです。
+@todo
 
 #### step5. マイク入力のテスト
 
 step5_microphone.pyで、サウンドデバイスがpythonからアクセスできるかテストしましょう。
 
+注意:WSL、VirtualBoxなどの仮想システムでは、サウンドデバイスにノイズが混じるため、通信が成立しないことがあります。
+
 ```
-> python step5_microphone.py
+> python .\step5_microphone.py
+[WARN] Imported local library.
+Volume meter
+######
 ```
 
-マイクに向かって、一曲歌いましょう。選曲はお任せします。
+マイクに向かって一曲披露してください。選曲はお任せします。
 "#"で示されるバーグラフが動いていれば、pythonは正常にマイクを認識しています。
 
 うまく認識できない場合は次の事を試してください。
@@ -156,29 +265,40 @@ step5_microphone.pyで、サウンドデバイスがpythonからアクセスで�
 3. 他のプログラムでマイクを認識しているか確認する。
 4. もっと大きな声で歌う。
 
+歌い終わったら、Ctrl^Cでプログラムを停止します。
+
+
 #### step6. リアルタイム送受信
 
 仕上げに、step6_realtime_receive.pyでリアルタイムに信号を復調します。
 マイクの準備は宜しいですか？
 
+注意:WSL、VirtualBoxなどの仮想システムでは、サウンドデバイスにノイズが混じるため、通信が成立しないことがあります。
+
 ```
-> python step6_realtime_receive.py
+> python .\step6_realtime_receive.py
+[WARN] Imported local library.
+160.0 bps
+Play step6.wave in your player.
+Start capturing
+>アンタヤルーニャ
+Terminated.
+>
 ```
 
 実行したディレクトリに、step6.wavが生成されています。
 このWaveファイルをpythonに聞かせてください。
 復調した文字列が表示されます。
 
-
 ところで、受信した信号の終端はどこなのか？という疑問が残されたままです。
 TBSKでは、信号を検知した後、信号強度が閾値を超えていれば、それが何であっても延々と値を復調し続けます。
 上位の通信仕様でパケット長を固定したり、長さパラメータを初めに送信するなどして対処してください。
 
 
-### そのほかの遊び方
+チュートリアルはここまでです。[アンタヤルーニャ](http://wiki.ffo.jp/html/2682.html)
 
-いろいろな周波数や波形で信号を作りましょう。
-TBSKのトーン信号は、ある程度の特徴があればどんな波形でも使えます。環境や目的に合わせてチューニングを楽しめます。
+
+
 
 
 
@@ -186,9 +306,9 @@ TBSKのトーン信号は、ある程度の特徴があればどんな波形で�
 
 さて、来週(来年)の目標は、
 
-1. Unity向けのC#実装
-2. マイコン/WASM向けのC++実装
-3. 無線機でとばそう
+1. Unityでも音響通信
+2. マイコンでも音響通信
+3. ブラウザでも音響通信
 
 の３本です。
 
