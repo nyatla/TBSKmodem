@@ -101,15 +101,19 @@ class Modulate(BaseCommand):
         src_pcm=None
         if numoffmt==0 or args.text is not None:
             src=inputstr("input string>") if numoffmt==0 or len(args.text)==0 else args.text
+            lprint("Start Modulation.")
             src_pcm=[i for i in mod.modulate(src)]
         elif args.hex is not None:
             src=inputstr("input hex string>") if len(args.hex)==0 else args.hex
+            lprint("Start Modulation.")
             src_pcm=[i for i in mod.modulateAsHexStr(src)]
         elif args.file is not None:
+            lprint("Start Modulation.")
             with open(args.file,"rb") as fp:
                 src_pcm=[i for i in mod.modulate(fp.read())]
         else:
             raise RuntimeError()
+        lprint("Modulated.")
         
         #save to wave
         carrier=args.carrier
@@ -117,13 +121,14 @@ class Modulate(BaseCommand):
         out=args.out
         silence=[0]*int(carrier*args.silence)
 
-        # print(len(src_pcm))
         pcm=PcmData(silence+src_pcm+silence,sample_bits,carrier)
+        lprint("Output file : %s  %dHz,%dbits,%dch,%.2fsec(silence:%.2fsec x 2)"%(out,pcm.frame_rate,pcm.sample_bits,1,pcm.timelen,args.silence))
+        lprint("Tone        : '%s' %dticks,%.1fmsec/symbol"%(args.tone,len(tone),len(tone)/carrier*1000))
+        lprint("Bit rate    : %.1fbps"%(carrier/len(tone)))
+        lprint()
         with open(out,"wb") as fp:
             PcmData.dump(pcm,fp)
-        print("Output file       : %s  %dHz,%dbits,%dch,%.2fsec(silence:%.2fsec x 2)"%(out,pcm.frame_rate,pcm.sample_bits,1,pcm.timelen,args.silence))
-        print("Tone              : '%s' %dticks,%.1fmsec/symbol"%(args.tone,len(tone),len(tone)/carrier*1000))
-        print("Bit rate          : %.1fbps"%(carrier/len(tone)))
+        lprint("Finihed.")
         return
 
 class Demodulate(BaseCommand):
@@ -159,68 +164,68 @@ class Demodulate(BaseCommand):
             pcm=PcmData.load(fp)
         tone=str2tone2("100" if args.tone is None else args.tone)    # SSFM DPSK
 
-        lprint("Input file       : %s  %dHz,%dbits,%dch,%.2fsec"%(args.src,pcm.frame_rate,pcm.sample_bits,1,pcm.timelen))
-        lprint("Tone             : %dticks,%.1fmsec/symbol"%(len(tone),len(tone)/pcm.frame_rate*1000))
-        lprint("Bit rate         : %.1fbps"%(pcm.frame_rate/len(tone)))
+        lprint("Input file  : %s  %dHz,%dbits,%dch,%.2fsec"%(args.src,pcm.frame_rate,pcm.sample_bits,1,pcm.timelen))
+        lprint("Tone        : %dticks,%.1fmsec/symbol"%(len(tone),len(tone)/pcm.frame_rate*1000))
+        lprint("Bit rate    : %.1fbps"%(pcm.frame_rate/len(tone)))
         lprint()
         demod=TbskDemodulator(tone)
-        src=pcm.dataAsFloat()
-        isrc=iter(src)
+        src=iter(pcm.dataAsFloat())
 
-        lprint("Start detection.")
 
         numoffmt=3-[args.text,args.hex,args.file].count(False)
         if numoffmt>1:
             raise RuntimeError("Must be set text,hex,file parameter in exclusive.")
+        lprint("Start Demodulation.")
         if numoffmt==0 or args.text==True:
-            c=0
-            try:
-                while True:
-                    n=demod.demodulateAsStr(isrc)
-                    lprint("Preamble found.")
-                    # print("RX>",end="",flush=True)
-                    for i in n:
-                        c=c+1
-                        print(i,end="",flush=True)
-                    print()
-                    lprint("No data" if c==0 else "End of signal.")
-            except StopIteration:
-                lprint("End of stream.")
-        elif args.hex==True:
-            c=0
-            try:
-                while True:
-                    n=demod.demodulateAsHexStr(isrc)
-                    lprint("Preamble found.")
-                    # print("RX>",end="",flush=True)
-                    for i in n:
-                        c=c+1
-                        print(i,end="",flush=True)
-                    print()
-                    lprint("No data" if c==0 else "End of signal.")
-            except StopIteration:
-                lprint("End of stream.")
-        elif args.file!=False:
-            c=0
-            d=b""
-            try:
-                while True:
-                    n=demod.demodulateAsBytes(isrc)
-                    lprint("Preamble found.")
+            while True:
+                c=0
+                n=demod.demodulateAsStr(src)
+                if n is None:
+                    break
+                lprint("Preamble found.")
+                # print("RX>",end="",flush=True)
+                for i in n:
                     c=c+1
-                    for i in n:
-                        d=d+i
-                        print(".",end="",flush=True)
-                    print()
-                    lprint("No data" if c==0 else "End of signal.")
-            except StopIteration:
-                lprint("End of stream.")
+                    print(i,end="",flush=True)
+                print()
+                lprint("Signal lost.")
+            lprint("End of stream.")
+        elif args.hex==True:
+            while True:
+                c=0
+                n=demod.demodulateAsHexStr(src)
+                if n is None:
+                    break
+                lprint("Preamble found.")
+                # print("RX>",end="",flush=True)
+                for i in n:
+                    c=c+1
+                    print(i,end="",flush=True)
+                print()
+                lprint("Signal lost.")
+            lprint("End of stream.")
+        elif args.file!=False:
+            d=b""
+            while True:
+                c=0
+                n=demod.demodulateAsBytes(src)
+                if n is None:
+                    break
+                lprint("Preamble found.")
+                for i in n:
+                    c=c+1
+                    d=d+i
+                    print(".",end="",flush=True)
+                print()
+                lprint("Signal lost.")
+            lprint("End of stream.")
             if len(d)>0:
                 with open(args.file,"wb") as fp:
                     fp.write(d)
                 lprint("File saved:%s"%(args.file))
         else:
             raise RuntimeError()
+        lprint("Finihed.")
         return
 
 class Tx(BaseCommand):
@@ -265,11 +270,14 @@ class Tx(BaseCommand):
         src_pcm=None
         if numoffmt==0 or args.text is not None:
             src=inputstr("input string>") if numoffmt==0 or len(args.text)==0 else args.text
+            lprint("Start Modulation.")
             src_pcm=[i for i in mod.modulate(src)]
         elif args.hex is not None:
             src=inputstr("input hex string>") if len(args.hex)==0 else args.hex
+            lprint("Start Modulation.")
             src_pcm=[i for i in mod.modulateAsHexStr(src)]
         elif args.file is not None:
+            lprint("Start Modulation.")
             with open(args.file,"rb") as fp:
                 src_pcm=[i for i in mod.modulate(fp.read())]
         else:
@@ -282,10 +290,10 @@ class Tx(BaseCommand):
 
         # print(len(src_pcm))
         pcm=PcmData(silence+src_pcm+silence,sample_bits,carrier)
-        print("Pcm format       : %dHz,%dbits,%dch,%.2fsec(silence:%.2fsec x 2)"%(pcm.frame_rate,pcm.sample_bits,1,pcm.timelen,args.silence))
-        print("Tone             : '%s' %dticks,%.1fmsec/symbol"%(args.tone,len(tone),len(tone)/carrier*1000))
-        print("Bit rate         : %.1fbps"%(carrier/len(tone)))
-        print("playing...")
+        lprint("Pcm format   : %dHz,%dbits,%dch,%.2fsec(silence:%.2fsec x 2)"%(pcm.frame_rate,pcm.sample_bits,1,pcm.timelen,args.silence))
+        lprint("Tone         : '%s' %dticks,%.1fmsec/symbol"%(args.tone,len(tone),len(tone)/carrier*1000))
+        lprint("Bit rate     : %.1fbps"%(carrier/len(tone)))
+        lprint("playing...")
         with SoundDeviceAudioPlayer(pcm,device_id=args.device) as sdp:
             sdp.play()
             last=0
@@ -297,6 +305,7 @@ class Tx(BaseCommand):
                     sleep(0.1)
                 bar.update(pcm.timelen-last)
             sdp.wait()
+        lprint("Finihed.")
         return
 
 
@@ -343,72 +352,59 @@ class Rx(BaseCommand):
         demod=TbskDemodulator(tone)
         with SoundDeviceInputIterator(args.carrier,device_id=args.device,bits_par_sample=args.sample_bits) as isrc:
 
-            def checkInput():
-                print("Press [ENTER] to stop.")
-                try:
-                    input()
-                except EOFError:
-                    pass
-                finally:
-                    isrc.close()
-
-
-            lprint("Start detection.")
-
             numoffmt=3-[args.text,args.hex,args.file].count(False)
             if numoffmt>1:
                 raise RuntimeError("Must be set text,hex,file parameter in exclusive.")
+            lprint("Start detection.")
             if numoffmt==0 or args.text==True:
-                c=0
-                try:
-                    while True:
-                        n=demod.demodulateAsStr(isrc)
-                        lprint("Preamble found.")
-                        # print("RX>",end="",flush=True)
-                        for i in n:
-                            c=c+1
-                            print(i,end="",flush=True)
-                        print("")
-                        lprint("No data" if c==0 else "End of signal.")
-                        if args.norepeat:
-                            break
-                except StopIteration:
-                    lprint("End of stream.")
-
-            elif args.hex==True:
-                c=0
-                try:
-                    while True:
-                        n=demod.demodulateAsHexStr(isrc)
-                        lprint("Preamble found.")
-                        # print("RX>",end="",flush=True)
-                        for i in n:
-                            c=c+1
-                            print(i,end="",flush=True)
-                        print("")
-                        lprint("No data" if c==0 else "End of signal.")
-                        if args.norepeat:
-                            break
-                except StopIteration:
-                    lprint("End of stream.")
-
-            elif args.file!=False:
-                c=0                
-                d=b""
-                try:
-                    while True:
-                        n=demod.demodulateAsBytes(isrc)
-                        lprint("Preamble found.")
+                while True:
+                    c=0
+                    n=demod.demodulateAsStr(isrc)
+                    if n is None:
+                        break
+                    lprint("Preamble found.")
+                    # print("RX>",end="",flush=True)
+                    for i in n:
                         c=c+1
-                        for i in n:
-                            d=d+i
-                            print(".",end="",flush=True)
-                        print()
-                        lprint("No data" if c==0 else "End of signal.")
-                        if args.norepeat:
-                            break
-                except StopIteration:
-                    lprint("End of stream.")
+                        print(i,end="",flush=True)
+                    print()
+                    lprint("Signal lost.")
+                    if args.norepeat:
+                        break
+                lprint("End of stream.")
+            elif args.hex==True:
+                while True:
+                    c=0
+                    n=demod.demodulateAsHexStr(isrc)
+                    if n is None:
+                        break
+                    lprint("Preamble found.")
+                    # print("RX>",end="",flush=True)
+                    for i in n:
+                        c=c+1
+                        print(i,end="",flush=True)
+                    print()
+                    lprint("Signal lost.")
+                    if args.norepeat:
+                        break
+                lprint("End of stream.")
+            elif args.file!=False:
+                d=b""
+                while True:
+                    c=0                
+                    n=demod.demodulateAsBytes(isrc)
+                    if n is None:
+                        break
+                    lprint("Preamble found.")
+                    for i in n:
+                        c=c+1
+                        d=d+i
+                        print(".",end="",flush=True)
+                    print()
+                    lprint("Signal lost.")
+                    if args.norepeat:
+                        break
+                lprint("End of stream.")
                 if len(d)>0:
                     with open(args.file,"wb") as fp:
                         fp.write(d)
