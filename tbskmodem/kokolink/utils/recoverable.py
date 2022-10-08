@@ -1,6 +1,6 @@
-from typing import Generic,TypeVar
+from typing import Generic,TypeVar,Union
 
-from ..types import NoneType,Generator, Iterator
+from ..types import NoneType,Generator, Iterator,Tuple
 
 T=TypeVar("T")
 
@@ -34,31 +34,39 @@ class RecoverableException(Exception,Generic[T]):
 class GeneratorRecoverException(RecoverableException[T],Generic[T]):
     """ generator[exception,any]]をラップするRecoverExceptionです。
         Recoverableをgeneratorで実装するときに使います。
-        exceptionがNoneの場合、値を正常値として扱います。not Noneの場合はその値を例外オブジェクトとして扱います。
-        Generatorの戻り値[0]は、None,StopException,RecoverableStopInterationのみが許されます。
+
+        このクラスは、(exception,T)を返すgeneratorをラップして、recoverで再実行可能な状態にします。
+        generatorはnextで再実行可能な状態でなければなりません。
     """
-    def __init__(self,exception:Exception,g:Generator[T,NoneType,NoneType]):
-        if isinstance(exception,RecoverableStopIteration):
-            self._g:Generator[T,NoneType,NoneType]=g
-        elif isinstance(exception,StopIteration):
-            g.close()
-            raise exception
-        else:
-            g.close()
-            raise RuntimeError("Bad exception")
+    def __init__(self,g:Generator[Tuple[Union[StopIteration,RecoverableStopIteration],T],NoneType,NoneType]):
+        """ ジェネレータをラップしたインスタンスを生成します。
+        ラップするジェネレータは、nextでe,T型の例外種別と戻り値を返す必要があります。
+
+        generatorの戻り値[0]は、None,StopException,RecoverableStopInterationのみが許されます。
+        """
+        self._g:Generator[T,NoneType,NoneType]=g
+        return
+
+
+
     def recover(self)->T:
+        """ 例外発生元のジェネレータを再実行します。
+        """
         e,r=next(self._g) #戻り値,Exceptionを受取
         # print("R","e=",type(e),"g=",self._g,"r=",r)
         if e is None:
+            #例外なし→成功
             # print("OK")
             self.close()
             return r
         if isinstance(e,RecoverableStopIteration):
+            #再実行依頼→変化なしでRaise
             # print("raise self")
             raise self
-        #未知のエラーならセッションを閉じてRaise
+        #何らかの例外があればGeneratorを閉じる
         self.close()
         if isinstance(e,StopIteration):
+            # print("raise stop")
             raise e
         if isinstance(e,Exception):
             raise e

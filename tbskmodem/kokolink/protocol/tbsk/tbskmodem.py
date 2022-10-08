@@ -172,8 +172,8 @@ class TbskDemodulator:
                         import traceback
                         traceback.print_exception(e)
                         raise
-            except StopIteration as e:
-                yield e,None
+            if peak_offset is None:
+                yield None,None #waitForSymbolがStopIntertionを出したときは終端到達。
             while True:
                 try:
                     # print(">>",peak_offset+stream.pos)
@@ -183,6 +183,11 @@ class TbskDemodulator:
                 except RecoverableStopIteration as e:
                     yield e,None
                     continue
+                except StopIteration as e:
+                    # print("KILLED2")
+                    yield None,None #waitForSymbolがStopIntertionを出したときは終端到達。
+                    return
+
             tbd=TraitBlockDecoder(tone_ticks)
             if filter is None:
                 yield None,tbd.setInput(stream)
@@ -200,18 +205,28 @@ class TbskDemodulator:
         if e is None:
             g.close()
             return r
-        raise GeneratorRecoverException(e,g)
+        elif isinstance(e,RecoverableStopIteration):
+            raise GeneratorRecoverException(g)
+        elif isinstance(e,StopIteration):
+            g.close()
+        else:
+            raise RuntimeError(e)
 
     def demodulateAsInt(self,src:Union[Iterator[float],Iterator[float]],bitwidth:int=8)->RecoverableIterator[int]:
         """ TBSK信号からnビットのint値配列を復元します。
-            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はStopInterationをraiseします。
+            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
         """
         g:Generator=self._common_gen(src,BitsWidthFilter(1,bitwidth))
         e,r=next(g)
         if e is None:
             g.close()
             return r
-        raise GeneratorRecoverException(e,g)
+        elif isinstance(e,RecoverableStopIteration):
+            raise GeneratorRecoverException(g)
+        elif isinstance(e,StopIteration):
+            g.close()
+        else:
+            raise RuntimeError(e)
 
     
 
@@ -219,27 +234,37 @@ class TbskDemodulator:
     def demodulateAsBytes(self,src:Union[Iterator[float],Iterator[float]])->RecoverableIterator[bytes]:
         """ TBSK信号からバイト単位でbytesを返します。
             途中でストリームが終端した場合、既に読みだしたビットは破棄されます。
-            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はStopInterationをraiseします。         
+            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。   
         """
         g:Generator=self._common_gen(src,Bits2BytesFilter())
         e,r=next(g)
         if e is None:
             g.close()
             return r
-        raise GeneratorRecoverException(e,g)
+        elif isinstance(e,RecoverableStopIteration):
+            raise GeneratorRecoverException(g)
+        elif isinstance(e,StopIteration):
+            g.close()
+        else:
+            raise RuntimeError(e)
 
 
     def demodulateAsStr(self,src:Union[Iterator[float],Iterator[float]],encoding:str="utf-8")->RecoverableIterator[str]:
         """ TBSK信号からsize文字単位でstrを返します。
             途中でストリームが終端した場合、既に読みだしたビットは破棄されます。
-            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はStopInterationをraiseします。
+            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
         """
         g:Generator=self._common_gen(src,Bits2StrFilter(encoding=encoding))        
         e,r=next(g)
         if e is None:
             g.close()
             return r
-        raise GeneratorRecoverException(e,g)        
+        elif isinstance(e,RecoverableStopIteration):
+            raise GeneratorRecoverException(g)
+        elif isinstance(e,StopIteration):
+            g.close()
+        else:
+            raise RuntimeError(e)
 
     def demodulateAsHexStr(self,src:Union[Iterator[float],Iterator[float]])->RecoverableIterator[str]:
         g:Generator=self._common_gen(src,Bits2HexStrFilter())        
@@ -247,4 +272,9 @@ class TbskDemodulator:
         if e is None:
             g.close()
             return r
-        raise GeneratorRecoverException(e,g)        
+        elif isinstance(e,RecoverableStopIteration):
+            raise GeneratorRecoverException(g)
+        elif isinstance(e,StopIteration):
+            g.close()
+        else:
+            raise RuntimeError(e)

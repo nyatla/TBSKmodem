@@ -34,12 +34,13 @@ class CoffPreamble(Preamble):
             return r
 
 
-    def waitForSymbol(self,src:IRoStream[float])->waitForSymbolResultAsInt:
+    def waitForSymbol(self,src:IRoStream[float])->Union[waitForSymbolResultAsInt,NoneType]:
         """ 尖形のピーク座標を返します。座標は[0:-1],[1:1],[2:1],[3:-1]の[2:1]の末尾に同期します。
             値はマイナスの事もあります。
             @raise
                 入力からRecoverableStopInterationを受信した場合、RecoverableExceptionを送出します。
                 呼び出し元がこの関数を処理しない限り,次の関数を呼び出すことはできません。
+                終端に到達した場合は、Noneを返します。
         """
         def gen(src:IRoStream[float])->Tuple[Exception,Union[NoneType,self.waitForSymbolResultAsInt]]:
             self._recover_lock=self._recover_lock+1
@@ -153,7 +154,7 @@ class CoffPreamble(Preamble):
                     return
             except StopIteration as e:
                 # print("END")
-                yield e,None
+                yield None,None
             finally:
                 self._recover_lock=self._recover_lock-1
                 # print("Generator closed")
@@ -165,4 +166,8 @@ class CoffPreamble(Preamble):
             g.close()
             return r
         #エラー処理
-        raise GeneratorRecoverException(e,g)
+        elif isinstance(e,RecoverableStopIteration):
+            raise GeneratorRecoverException(g)
+        else:
+            g.close()
+            raise RuntimeError(e)
