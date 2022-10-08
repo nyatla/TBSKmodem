@@ -25,7 +25,7 @@ def main():
     #demodulate to bytes
     demod=TbskDemodulator(tone)
     ret=demod.demodulateAsBytes(wav.dataAsFloat())
-    print([i for i in ret])
+    print([i for i in ret] if ret is not None else None)
 
 if __name__ == "__main__":
     main()

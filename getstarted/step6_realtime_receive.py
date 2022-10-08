@@ -41,12 +41,10 @@ def main():
         try:
             while True:
                 print(">",end="",flush=True)
-                try:
-                    s=demod.demodulateAsStr(stream)
-                except StopIteration:
-                    raise
-                for i in s:
-                    print(i,end="",flush=True)
+                s=demod.demodulateAsStr(stream)
+                if s is not None:
+                    for i in s:
+                        print(i,end="",flush=True)
                 print("\nEnd of signal.")
         except StopIteration:
             pass
