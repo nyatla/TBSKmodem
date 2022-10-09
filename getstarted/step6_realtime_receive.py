@@ -42,12 +42,11 @@ def main():
             while True:
                 print(">",end="",flush=True)
                 s=demod.demodulateAsStr(stream)
-                if s is not None:
-                    for i in s:
-                        print(i,end="",flush=True)
+                if s is None:
+                    break
+                for i in s:
+                    print(i,end="",flush=True)
                 print("\nEnd of signal.")
-        except StopIteration:
-            pass
         except KeyboardInterrupt:
             print("\nInterrupted.")
         finally:

@@ -25,8 +25,9 @@ TBSK (Trait Block Shift Keying) modemは、FFT/IFTTを使わない、低速、�
 
 ### 特徴ブロック差動変調
 
-TBSKでは、波形シンボルの代わりにスペクトラム拡散した任意形状トーン信号とその反転値を伝送シンボルに使います。
-隣接するシンボルの相関値は1,-1を取るので、これを差動変調して伝送します。
+TBSKの特徴ブロック差動変調は、波形シンボルの代わりに任意形状のトーン信号とその反転値を、2値の伝送シンボルとして使います。
+トーン信号はスペクトラム拡散したSin波を使いますが、他にも任意形状の波形を使うことができます。
+復調は、隣接するシンボルの相関値を遅延検波します。相関値は1,-1を取るので、これをビットに復調します。
 
 この伝送方式のパラメータは、トーン信号長(Tick数×搬送波周波数)のみです。トーン信号長だけ適合していれば、同一な復調器で信号の形式によらず復調することができます。
 
@@ -40,7 +41,7 @@ TBSKでは、波形シンボルの代わりにスペクトラム拡散した任�
 ### トーン信号
 
 標準のトーン信号は、Sin波をPN符号で位相シフトしたスペクトラム拡散波形です。
-トーン信号は受信機でS/N比が高い形状であれば何でも構いません。トーン信号にサイン波を使用すると、DPSK変調と同じ動作をします。
+トーン信号は復調側でS/N比が高くなる形状であれば何でも構いません。トーン信号にサイン波を使用すると、DPSK変調と同じ動作をします。
 
 ### 外乱耐性
 
@@ -56,7 +57,7 @@ TBSKでは、波形シンボルの代わりにスペクトラム拡散した任�
 ## ライセンス
 
 本ソフトウェアは、MITライセンスで提供します。ホビー・研究用途では、MITライセンスに従って適切に運用してください。
-産業用途では、特許の取り扱いに注意してください。ありきたりな通信システムですから、きっと誰かが特許を持っています。
+産業用途では、特許の取り扱いに注意してください。
 
 このライブラリはMITライセンスのオープンソースソフトウェアですが、特許フリーではありません。
 
@@ -82,12 +83,14 @@ step4より先に進むならば、numpy,sounddeviceをインストールして�
 >conda install -c conda-forge python-sounddevice
 ```
 
-※代替としてpyaudioを利用する場合は、キャプチャのみ対応します。
 
 
 ### サンプルプログラムの場所
 
 サンプルプログラムはTBSKmodem/getstartedディレクトリにあります。
+```
+> cd getstarted
+```
 
 #### step1. データをwaveファイルに変換する。
 step1.modulate.pyは、ビット値を変調することができます。
@@ -150,7 +153,7 @@ def main():
     demod=TbskDemodulator(tone)
 
     ret=demod.demodulateAsBit(wav.dataAsFloat())
-    print([i for i in ret])
+    print([i for i in ret] if ret is not None else None)
 ```
 信号を格納したWaveファイルはstep1で作成したstep1.wavです。これを読み出します。
 次にトーン信号を作り、そこから復調器のTbskDemodulatorを作り、demodulateAsBit関数で復調します。
@@ -193,7 +196,7 @@ def main():
     #demodulate to bytes
     demod=TbskDemodulator(tone)
     ret=demod.demodulateAsBytes(wav.dataAsFloat())
-    print([i for i in ret])
+    print([i for i in ret] if ret is not None else None)
 ```
 
 step1とstep2を合体したような構造です。
@@ -210,15 +213,14 @@ step4_text.pyは、文字列の変調と復調を実行します。
 > python .\step4_text.py    
 [WARN] Imported local library.
 ['ア', 'ン', 'タ', 'ヤ', 'ル', 'ー', 'ニ', 'ャ']
-PS D:\project.public\TbskModem\getstarted>
 >
 ```
-メイン関数を見てみましょう。とはいえ、step3とほとんど変わりません。
+メイン関数を見てみましょう。step3とほとんど変わりません。
 
 ```
 def main():
     tone=XPskSinTone(10,10).mul(0.5)    # SSFM DPSK
-    payload="アンタヤルーニャ"
+    payload="アンタヤルーニャ" # 8byte
     carrier=8000
 
     #modulation
@@ -231,7 +233,7 @@ def main():
     #demodulate to bytes
     demod=TbskDemodulator(tone)
     ret=demod.demodulateAsStr(wav.dataAsFloat())
-    print([i for i in ret])
+    print([i for i in ret] if ret is not None else None)
 ```
 変調部分はmod.modulateそのままです。
 関数呼び出しの変更点は、復調部分でdemodulateAsStr関数が使われているところです。
@@ -251,8 +253,9 @@ step5_microphone.pyで、サウンドデバイスがpythonからアクセスで�
 ```
 > python .\step5_microphone.py
 [WARN] Imported local library.
+Press [ENTER] to stop.
 Volume meter
-######
+###
 ```
 
 マイクに向かって一曲披露してください。選曲はお任せします。
@@ -265,7 +268,7 @@ Volume meter
 3. 他のプログラムでマイクを認識しているか確認する。
 4. もっと大きな声で歌う。
 
-歌い終わったら、Ctrl^Cでプログラムを停止します。
+歌い終わったら、ENTERでプログラムを停止します。
 
 
 #### step6. リアルタイム送受信
@@ -282,7 +285,7 @@ Volume meter
 Play step6.wave in your player.
 Start capturing
 >アンタヤルーニャ
-Terminated.
+End of signal.
 >
 ```
 
@@ -306,9 +309,9 @@ TBSKでは、信号を検知した後、信号強度が閾値を超えていれ�
 
 さて、来週(来年)の目標は、
 
-1. Unityでも音響通信
-2. マイコンでも音響通信
-3. ブラウザでも音響通信
+1. Unityで動かしてみよう。
+2. ブラウザでも動かしてみよう。
+3. ペイロードの秘匿化とエラー訂正
 
 の３本です。
 

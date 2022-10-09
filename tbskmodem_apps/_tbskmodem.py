@@ -9,10 +9,10 @@ import sys,os
 is_local_library=False
 
 try:
-    from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData,SoundDeviceInputIterator,SoundDeviceAudioPlayer,SinTone, TraitTone,__version__
+    from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData,SoundDeviceInputIterator,SoundDeviceAudioPlayer,SinTone, TraitTone,MSeqTone, PnTone,__version__
 except ModuleNotFoundError:
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-    from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData,SoundDeviceInputIterator,SoundDeviceAudioPlayer,SinTone, TraitTone,__version__
+    from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData,SoundDeviceInputIterator,SoundDeviceAudioPlayer,SinTone, TraitTone,MSeqTone,PnTone,__version__
     is_local_library=True
 
 
@@ -27,22 +27,47 @@ def inputstr(message:str)->str:
     print(message)
     return input()
 def str2tone(param:str)->TraitTone:
-    m=re.match(r'^[a-z]+\:[1-9][0-9]*(\,[1-9][0-9]*)+$',param)
+    m=re.match(r'^[a-z0-1]+\:',param) #name:...
     if m is not None:
-        s=m.group().split(":") #name,param,param,...
-        if s[0]=="xpsk":
-            p=s[1].split(",")
-            if len(p)==2:
-                return XPskSinTone(int(p[0]),int(p[1]))
-            elif len(p)==3:
-                return XPskSinTone(int(p[0]),int(p[1]),int(p[2]))
-            raise RuntimeError("tone parameter must be 'xpsk:points,cycle(,shift)'")
-        elif s[0]=="sin":
-            p=s[1].split(",")
-            if len(p)==2:
+        s=m.group() #name,param:param,...
+        name=m.group()[:-1] #name:
+        value=param[len(name)+1:]
+        if name=="xpsk":
+            v=re.match(r'^[1-9][0-9]*(\,[1-9][0-9]*)(\,[1-9][0-9]*)?$',value)
+            if v is not None:
+                p=v.group().split(",")
+                if len(p)==2:
+                    return XPskSinTone(int(p[0]),int(p[1]))
+                elif len(p)==3:
+                    return XPskSinTone(int(p[0]),int(p[1]),int(p[2]))
+            raise RuntimeError("xpsk must be 'xpsk:point,cycle,(shift)' 'ex xpsk:10:10'")
+        elif name=="sin":
+            v=re.match(r'^[1-9][0-9]*(\,[1-9][0-9]*)$',value)
+            if v is not None:
+                p=v.group().split(",")
                 return SinTone(int(p[0]),int(p[1]))
-            raise RuntimeError("tone parameter must be 'sin:points,cycle'")
-    raise RuntimeError("tone parameter must be 'xpsk:P,C(,S)' or 'sin:P,C'")
+            raise RuntimeError("sin must be 'sin:point,cycle' ex 'sin:10,10'")
+        elif name=="pn":
+            v=re.match(r'^[1-9][0-9]*(\,[1-9][0-9]*)\,',value)
+            if v is not None:
+                p=v.group().split(",")
+                subtone=value[v.span()[1]:]
+                if "pn" in subtone:
+                    raise ValueError("Recursion error")
+                return PnTone(int(p[0]),int(p[1]),str2tone(subtone))
+            raise RuntimeError("pn must be 'pn:seed,interval,basetone' ex 'pn:299,2,sin:10,10'")
+        elif name=="mseq":
+            v=re.match(r'^[1-9][0-9]*(\,[1-9][0-9]*)\,',value)
+            if v is not None:
+                p=v.group().split(",")
+                print(value[v.span()[1]:])
+                subtone=value[v.span()[1]:]
+                if "mseq" in subtone:
+                    raise ValueError("Recursion error")
+                return MSeqTone(int(p[0]),int(p[1]),str2tone(subtone))
+            raise RuntimeError("Parameter must be 'mseq:bit,tap,base_tone' ex'mseq:3,2,sin:10,10'")
+
+    raise RuntimeError("tone parameter must be 'xpsk|sin|pn|mseq:...")
 def str2tone2(param:str)->TraitTone:
     m=re.match(r'^[1-9][0-9]+$',param)
     if m is not None:
@@ -293,7 +318,8 @@ class Tx(BaseCommand):
         lprint("Pcm format   : %dHz,%dbits,%dch,%.2fsec(silence:%.2fsec x 2)"%(pcm.frame_rate,pcm.sample_bits,1,pcm.timelen,args.silence))
         lprint("Tone         : '%s' %dticks,%.1fmsec/symbol"%(args.tone,len(tone),len(tone)/carrier*1000))
         lprint("Bit rate     : %.1fbps"%(carrier/len(tone)))
-        lprint("playing...")
+        lprint()
+        lprint("Playing...")
         with SoundDeviceAudioPlayer(pcm,device_id=args.device) as sdp:
             sdp.play()
             last=0
@@ -350,12 +376,14 @@ class Rx(BaseCommand):
         lprint("Bit rate         : %.1fbps"%(args.carrier/len(tone)))
         lprint()
         demod=TbskDemodulator(tone)
+        lprint()
+        lprint("Listening...")
+
         with SoundDeviceInputIterator(args.carrier,device_id=args.device,bits_par_sample=args.sample_bits) as isrc:
 
             numoffmt=3-[args.text,args.hex,args.file].count(False)
             if numoffmt>1:
                 raise RuntimeError("Must be set text,hex,file parameter in exclusive.")
-            lprint("Start detection.")
             if numoffmt==0 or args.text==True:
                 while True:
                     c=0
@@ -426,6 +454,29 @@ def main():
         args:argparse.Namespace = parser.parse_args()
         if args.version:
             print(("tbskmodem/"+__version__+";"+sys.version+";"+platform.platform()).replace("\n",""))
+            print("""
+TBSK modem -- Trait Block Shift Keying modulation/demodulation library.
+
+Copyright (C) 2022, Ryo Iizuka, nyatla.jp.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.            
+            """)
         elif hasattr(args, 'handler'):
             global lprint
             if "noinfo" in args and args.noinfo:

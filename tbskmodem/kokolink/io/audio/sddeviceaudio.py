@@ -132,8 +132,6 @@ class SoundDeviceAudioPlayer(IAudioPlayer):
             if len(d)==0:
                 raise sd.CallbackStop()
 
-
-        print(self._framerate)
         stream = sd.OutputStream(
             dtype="float32",latency="high",
             samplerate=self._framerate, device=self._device_id, channels=1,

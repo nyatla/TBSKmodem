@@ -24,9 +24,13 @@ pip install tbskmodem
 Wavファイルへの変換は、modサブコマンドを使います。
 ```
 $ tbskmodem mod delicious.wav --text からあげうまい
-Output file       : delicious.wav  16000Hz,16bits,1ch,2.14sec(silence:0.50sec x 2)
-Tone              : 'xpsk:10,10' 100ticks,6.2msec/symbol
-Bit rate          : 160.0bps
+Start Modulation.
+Modulated.
+Output file : delicious.wav  16000Hz,16bits,1ch,2.14sec(silence:0.50sec x 2)
+Tone        : 'xpsk:10,10' 100ticks,6.2msec/symbol
+Bit rate    : 160.0bps
+
+Finihed.
 ```
 
 このコマンドは、文字列をutf-8でバイナリ値にエンコードして、変調したWaveファイルを出力します。
@@ -39,7 +43,7 @@ usage: tbskmodem mod [-h] [--carrier CARRIER] [--sample_bits {8,16}] [--tone TON
                      [--hex [HEX]] [--file FILE]
                      out
 
-Moduleate text or hextext or binary to wavefile.
+Moduleate text or hex string or binary to wavefile.
 
 positional arguments:
   out                   Output wave file name.
@@ -68,21 +72,30 @@ Example:
 ```
 
 --textの代わりに--hexを使うと、文字列をhex stringとして解釈します。
+このオプションは、ブロックチェーンのトランザクションを変調するときに役立ちます。
 
 ```
 $ tbskmodem mod delicious.wav --hex 79616b69746f7269756d6169
-Output file       : delicious.wav  16000Hz,16bits,1ch,1.69sec(silence:0.50sec x 2)
-Tone              : 'xpsk:10,10' 100ticks,6.2msec/symbol
-Bit rate          : 160.0bps
+Start Modulation.
+Modulated.
+Output file : delicious.wav  16000Hz,16bits,1ch,1.69sec(silence:0.50sec x 2)
+Tone        : 'xpsk:10,10' 100ticks,6.2msec/symbol
+Bit rate    : 160.0bps
+
+Finihed.
 ```
 
 --fileを使うと、引数のファイルの内容をバイナリ値として変調します。
 
 ```
 $ tbskmodem mod licence.wav --file ./LICENSE
-Output file       : licence.wav  16000Hz,16bits,1ch,59.14sec(silence:0.50sec x 2)
-Tone              : 'xpsk:10,10' 100ticks,6.2msec/symbol
-Bit rate          : 160.0bps
+Start Modulation.
+Modulated.
+Output file : licence.wav  16000Hz,16bits,1ch,59.14sec(silence:0.50sec x 2)
+Tone        : 'xpsk:10,10' 100ticks,6.2msec/symbol
+Bit rate    : 160.0bps
+
+Finihed.
 ```
 
 --textと--hexで値引数を省略すると、入力を求められます。
@@ -96,32 +109,35 @@ Waveファイルからの変換は、demサブコマンドを使います。先�
 
 このコマンドは、復調したビット値をutf-8でデコードして結果を返します。
 ```
-$ tbskmodem dem delicious.wav --text
-[WARN] Executed on WSL platform. Audio device may not work properly.
-Input file       : delicious.wav  16000Hz,16bits,1ch,2.14sec
-Tone             : 100ticks,6.2msec/symbol
-Bit rate         : 160.0bps
+$ $ tbskmodem dem delicious.wav --text
+Input file  : delicious.wav  16000Hz,16bits,1ch,1.69sec
+Tone        : 100ticks,6.2msec/symbol
+Bit rate    : 160.0bps
 
-Start detection.
+Start Demodulation.
 Preamble found.
-からあげうまい
-End of signal.
+yakitoriumai
+Signal lost.
+End of stream.
+Finihed.
 ```
 
 
 --texeの代わりに--hexを使うと、復調したビット値をhexstrで表示します。
+このオプションは、ブロックチェーンのトランザクションを復調するときに役立ちます。
 
 ```
 $ tbskmodem dem delicious.wav --hex
-Input file       : delicious.wav  16000Hz,16bits,1ch,2.14sec
-Tone             : 100ticks,6.2msec/symbol
-Bit rate         : 160.0bps
+Input file  : delicious.wav  16000Hz,16bits,1ch,1.69sec
+Tone        : 100ticks,6.2msec/symbol
+Bit rate    : 160.0bps
 
-Start detection.
+Start Demodulation.
 Preamble found.
-e3818be38289e38182e38192e38186e381bee38184
-End of signal.
+79616b69746f7269756d6169
+Signal lost.
 End of stream.
+Finihed.
 ```
 
 --fileを使うと、値引数で指定したファイルにバイナリ値をそのまま書き込みます。
@@ -136,20 +152,50 @@ txサブコマンドは、変調した信号を直接オーディオデバイス
 
 ```
 $ tbskmodem tx --text 今川焼？大判焼き？回転焼き？
-Pcm format       : 16000Hz,16bits,1ch,3.19sec(silence:0.50sec x 2)
-Tone             : 'xpsk:10,10' 100ticks,6.2msec/symbol
-Bit rate         : 160.0bps
+[WARN] Executed on WSL platform. Audio device may not work properly.
+Start Modulation.
+Pcm format   : 16000Hz,16bits,1ch,3.19sec(silence:0.50sec x 2)
+Tone         : 'xpsk:10,10' 100ticks,6.2msec/symbol
+Bit rate     : 160.0bps
 playing...
 16000
-100%|█████████████████████████████████████████████████████████████████
+100%|████████████████████████████████████████████████████████████████████████
+Finihed.
 ```
 --text,--hex,--file引数はmodサブコマンドと同じです。
 
 オーディオデバイスに接続できない場合は--deviceパラメータでオーディオデバイスのIDを変更してみてください。
-番号は気合で探します。
+番号は気合で探す必要があります。
+
+--volumeオプションで音量を調整することができます。
+
+
 
 ### オーディオデバイスから音声を取り込んで文字列、Hex string、ファイルを復調する。
 
 
 rxサブコマンドは、信号をオーディオデバイスから取り込んで内容を表示、保存します。
+
+```
+$ tbskmodem rx --text
+Audio source     : 16000Hz,16bits,1ch deviceid:None
+Tone             : 100ticks,6.2msec/symbol
+Bit rate         : 160.0bps
+
+Start detection.
+Preamble found.
+TBSK modem -- Trait Block Shift Keying modulation/demodulation library.
+Signal lost.
+```
+
+スクリプトが待機状態になったら、別の端末、もしくは別のターミナルから信号を送信します。
+```
+$python ./_tbskmodem.py tx --text "TBSK modem -- Trait Block Shift Keying modulation/demodulation library."
+```
+
+スクリプトは延々とシグナルの検出を続けます。終了するにはCtrl^Cか、Ctrl^[PAUSE]を入力します。
+
+--norepeatオプションを指定すると、１つだけ信号を検出して終了します。
+
+
 
