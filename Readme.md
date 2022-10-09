@@ -6,7 +6,7 @@ TBSK (Trait Block Shift Keying) modemは、FFT/IFTTを使わない、低速、�
 
 開発用のライブラリと、コンソールアプリ[tbskmodem](tbskmodem.md)があります。
 
-English documente 👉[Readme.en.md]
+English documente 👉[Readme.en.md](Readme.en.md)
 
 ## 性能
 

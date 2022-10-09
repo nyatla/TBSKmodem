@@ -6,7 +6,7 @@ It can modulate a byte/bitstream to PCM  and demodulate PCM to a byte/bitstream.
 
 There is a library for development and a console script [tbskmodem](tbskmodem.md).
 
-Japanese documente 👉[Readme.md]
+Japanese documente 👉[Readme.md](Readme.md)
 ## Performance
 
 Throughput in a quiet room is 5 bps to 1 kbps and transmit distance is about 1 meter.
