@@ -16,7 +16,7 @@ $ pip install .
 ```
 
 
-ソースコードは、[tbskmodem_apps/_tbskmodem.py](https://github.com/nyatla/TBSKmodem/tbskmodem_apps/_tbskmodem.py)です。
+ソースコードは、[tbskmodem_apps/_tbskmodem.py](https://github.com/nyatla/TBSKmodem/blob/master/tbskmodem_apps/_tbskmodem.py)です。
 
 
 ## 機能
