@@ -4,6 +4,7 @@ TBSK (Trait Block Shift Keying) modemは、FFT/IFTTを使わない、低速、�
 
 バイト/ビットストリームの振幅信号への変調、振幅信号からバイト/ビットストリームへの復調ができます。
 
+機能を一通り試せるコンソールアプリの[tbskmodem](tbskmodem.md)については[こちら](tbskmodem.md)
 
 ## 性能
 
@@ -65,7 +66,7 @@ TBSKの特徴ブロック差動変調は、波形シンボルの代わりに任�
 
 [特許情報プラットフォーム](https://www.j-platpat.inpit.go.jp/)
 
-+ [変調装置及び復調装置 WO-A-2010/016589](https://www.j-platpat.inpit.go.jp/c1800/PU/WO-A-2010-016589/7847773A7250230D1C8D66BBF506D4E794BEF7F38B5DF2B8C11BE9225DF7BB10/50/ja)
+[変調装置及び復調装置 WO-A-2010/016589](https://www.j-platpat.inpit.go.jp/c1800/PU/WO-A-2010-016589/7847773A7250230D1C8D66BBF506D4E794BEF7F38B5DF2B8C11BE9225DF7BB10/50/ja)
 
 専門家の監修は受けておりませんので、詳細はご自身でお調べください。
 

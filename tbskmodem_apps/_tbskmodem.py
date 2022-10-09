@@ -26,7 +26,7 @@ lprint=print
 def inputstr(message:str)->str:
     print(message)
     return input()
-def str2tone(param:str)->TraitTone:
+def str2tone(param:str,carrier:int)->TraitTone:
     m=re.match(r'^[a-z0-1]+\:',param) #name:...
     if m is not None:
         s=m.group() #name,param:param,...
@@ -54,7 +54,7 @@ def str2tone(param:str)->TraitTone:
                 subtone=value[v.span()[1]:]
                 if "pn" in subtone:
                     raise ValueError("Recursion error")
-                return PnTone(int(p[0]),int(p[1]),str2tone(subtone))
+                return PnTone(int(p[0]),int(p[1]),str2tone(subtone,carrier))
             raise RuntimeError("pn must be 'pn:seed,interval,basetone' ex 'pn:299,2,sin:10,10'")
         elif name=="mseq":
             v=re.match(r'^[1-9][0-9]*(\,[1-9][0-9]*)\,',value)
@@ -64,8 +64,15 @@ def str2tone(param:str)->TraitTone:
                 subtone=value[v.span()[1]:]
                 if "mseq" in subtone:
                     raise ValueError("Recursion error")
-                return MSeqTone(int(p[0]),int(p[1]),str2tone(subtone))
+                return MSeqTone(int(p[0]),int(p[1]),str2tone(subtone,carrier))
             raise RuntimeError("Parameter must be 'mseq:bit,tap,base_tone' ex'mseq:3,2,sin:10,10'")
+        elif name=="pcm":
+            with open(value,"rb") as fp:
+                pcm=PcmData.load(fp)
+                print(pcm.frame_rate,carrier)
+                if pcm.frame_rate!=carrier:
+                    raise ValueError("Pcm framerate must be same as carrier")
+                return TraitTone(pcm.dataAsFloat())
 
     raise RuntimeError("tone parameter must be 'xpsk|sin|pn|mseq:...")
 def str2tone2(param:str)->TraitTone:
@@ -117,7 +124,7 @@ class Modulate(BaseCommand):
     def execute(self,args):
 
         # print(args)
-        tone=str2tone(args.tone)    # SSFM DPSK
+        tone=str2tone(args.tone,args.carrier)    # SSFM DPSK
         mod=TbskModulator(tone)
         #入力値の判定
         numoffmt=3-[args.text,args.hex,args.file].count(None)
@@ -286,7 +293,7 @@ class Tx(BaseCommand):
     def execute(self,args):
 
         # print(args)
-        tone=str2tone(args.tone).mul(max(0,min(1,args.volume)))    # SSFM DPSK
+        tone=str2tone(args.tone,args.carrier).mul(max(0,min(1,args.volume)))    # SSFM DPSK
         mod=TbskModulator(tone)
         #入力値の判定
         numoffmt=3-[args.text,args.hex,args.file].count(None)

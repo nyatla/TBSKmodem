@@ -7,10 +7,19 @@ PyPIからインストールできます。
 pip install tbskmodem
 ```
 
+githubからインストールする場合は、次のようにします。
+
+```
+$ git clone https://github.com/nyatla/TBSKmodem.git
+$ cd TBSKmodem
+$ pip install .
+```
+
+
 ソースコードは、[tbskmodem_apps/_tbskmodem.py](https://github.com/nyatla/TBSKmodem/tbskmodem_apps/_tbskmodem.py)です。
 
 
-### 機能
+## 機能
 
 以下の機能があります。
 
@@ -199,3 +208,59 @@ $python ./_tbskmodem.py tx --text "TBSK modem -- Trait Block Shift Keying modula
 
 
 
+## パラメータの詳細
+
+### トーン信号の変更 (--tone)
+
+rxとmodサブコマンドでは、--toneオプションで変調に使うトーンを変更できます。
+
+トーン信号にはプリセットの4種類と、ユーザー定義値があります。
+
+#### プリセット値
+
+
+`--tone sin:points,cycle`
+
+このトーン値は、単純なSin波です。
+Sin波一周期をサンプル数pointsで生成し、それをcycle回繰り返します。
+
+`--tone xpsk:points,cycle(,shift)`
+
+このトーン値は、位相シフトスペクトラム拡散Sin波です。
+とりあえず、Sin波が広帯域に拡散されます。
+
+Sin波一周期を,2π/shift*PN[n]づつ位相をずらしながら、サンプル数pointsで生成し、それをcycle回繰り返します。
+PN[n]は1,-1をとる乱数数列です。
+
+`--tone pn:seed,interval,basetone`
+
+basetoneに指定したトーンを、XorShiftでintervalティックおきに反転します。
+出力されるトーン長さは、basetoneと同じです。
+
+`--tone mseq:bits,tap,basetone`
+
+basetoneに指定したトーンをM-Sequenceで変調します。
+出力されるトーン長さは、basetone*2^bitsです。
+
+`--tone pcm:filename.wav`
+
+ファイル名で示されるpcmファイルをそのまま1シンボル分のトーン信号にします。
+pcmファイルは、1チャンネルモノラルでなければなりません。
+
+
+
+トーン信号を指定した信号を復調するには、復調側のtx,demサブコマンドでも--toneを指定しなければなりません。
+復調側で指定すべき値は、信号の変調結果にある、Tone: xxxTickの部分です。
+
+```
+Output file : aaa.wav  16000Hz,16bits,1ch,3.04sec(silence:0.50sec x 2)
+Tone        : 'xpsk:10,10' 100ticks,6.2msec/symbol
+Bit rate    : 160.0bps
+```
+
+このように指定します。
+```
+$ tbskmodem rx --tone 100 --text
+```
+
+キャリア周波数を変更した場合も同様です。--carrierで変調時と同じ値を与えてください。
