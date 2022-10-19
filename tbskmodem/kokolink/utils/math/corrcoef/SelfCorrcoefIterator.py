@@ -2,16 +2,16 @@ from math import sqrt
 from typing import Union
 
 
-
+from ....interfaces import IRecoverableIterator
 from ....types import Deque, Iterable, Iterator
-from ...recoverable import RecoverableIterator, RecoverableStopIteration
+from ...recoverable import RecoverableStopIteration
 
-class SelfCorrcoefIterator(RecoverableIterator[float]):
+class SelfCorrcoefIterator(IRecoverableIterator[float]):
     """ src[:]とsrc[shift:]の相関を返すストリームです。
         n番目に区間[n,n+window]と[n+shift,n+shift+window]の相関値を返します。
         開始からwindow-shift個の要素は0になります。
     """
-    def __init__(self,window:int,src:Union[Iterator[float],Iterable[float]],shift:int=None):
+    def __init__(self,window:int,src:Union[Iterator[float],Iterable[float]],shift:int=0):
         self.xyi=[None]*window #Xi
         self.c=0 #エントリポイント
         self.n=0 #有効なデータ数
@@ -24,7 +24,6 @@ class SelfCorrcoefIterator(RecoverableIterator[float]):
         self._srcy=Deque[float]()
         """初期化
         """
-        self._shift=shift
         self._srcy.extend([0]*shift)
         
         # for i in range(window-1):
@@ -64,8 +63,9 @@ class SelfCorrcoefIterator(RecoverableIterator[float]):
         self.xyi[m]=(vx,vy)
 
         self.c+=1
-        if self.n==0:
-            return None
+        assert(self.n>0)
+        # if self.n==0:
+        #     return None
         if self.n==1:
             return 1.
 

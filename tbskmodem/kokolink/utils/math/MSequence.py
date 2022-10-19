@@ -1,9 +1,10 @@
+from typing import Tuple
 from ...types import Dict,Iterator
 
 class MSequence(Iterator[int]):
     """M系列シーケンスを返すイテレータを生成します。
     """
-    def __init__(self,bits:int,tap:int=None,sr=1):
+    def __init__(self,bits:int,tap:int=None,sr:int=1):
         assert(bits<64)
         assert(bits>=2)
         assert((tap is None) or tap<bits)
@@ -27,15 +28,15 @@ class MSequence(Iterator[int]):
         self._sr=sr & self._mask
         return bit
     @property
-    def maxcycle(self):
+    def maxcycle(self)->int:
         """最大周期を返します。
         """
         return 2**(self._bits+1)-1
-    def gets(self,n:int):
+    def gets(self,n:int)->Tuple[int,...]:
         """n個の成分を返します。
         """
         return tuple([next(self) for i in range(n)])
-    def getOneCycle(self):
+    def getOneCycle(self)->Tuple[int,...]:
         """1サイクル分のシーケンスを得ます
         """
         return self.gets(self.cycles())
@@ -57,7 +58,7 @@ class MSequence(Iterator[int]):
         self._sr=old_sr
         return mv
     @classmethod
-    def getCyclesMap(cls,bits)->Dict[int,int]:
+    def getCyclesMap(cls,bits:int)->Dict[int,int]:
         """bitsのサイクル一覧を返します。
         n番目の要素にtap=nのサイクル数が返ります。
         """

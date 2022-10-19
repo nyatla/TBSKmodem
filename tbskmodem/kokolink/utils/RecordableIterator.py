@@ -1,10 +1,10 @@
 from typing import TypeVar
 
 from ..types import Deque,Iterator,List
-from .recoverable import RecoverableStopIteration,RecoverableIterator
-
+from .recoverable import RecoverableStopIteration
+from ..interfaces import IRecoverableIterator
 T=TypeVar("T")
-class RecordableIterator(RecoverableIterator[T]):
+class RecordableIterator(IRecoverableIterator[T]):
     """ イテレータを通過した値を記録します。
         出力先には取得元のイテレータと同じ振る舞いをします。
         このイテレータはRecoverableStopInterationを利用できます。

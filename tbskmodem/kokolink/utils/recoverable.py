@@ -1,11 +1,9 @@
 from typing import Generic,TypeVar,Union
-
+from ..interfaces import IRecoverableIterator
 from ..types import NoneType,Generator, Iterator,Tuple
 
 T=TypeVar("T")
 
-class RecoverableIterator(Iterator[T],Generic[T]):
-    ...
 
 class RecoverableStopIteration(StopIteration,Generic[T]):
     """ リカバリー可能なStopIterationです。
@@ -78,9 +76,9 @@ class GeneratorRecoverException(RecoverableException[T],Generic[T]):
         self._g.close()
         self._g=None
 
-class NoneRestrictIteraor(RecoverableIterator[T]):
+class NoneRestrictIteraor(IRecoverableIterator[T]):
     """ Noneの混在したストリームで、Noneを検出するたびにRecoverableStopInterationを発生します。
-        None混在の一般IteratorをRecoverableIteratorに変換します。
+        None混在の一般IteratorをIRecoverableIteratorに変換します。
     """
     def __init__(self,iter:Iterator[T]):
         self._iter=iter
@@ -90,7 +88,7 @@ class NoneRestrictIteraor(RecoverableIterator[T]):
             raise RecoverableStopIteration()
         return r
 class SkipRecoverIteraor(Iterator[T]):
-    """ RecoverableIteratorを一般Iteratorをに変換します。
+    """ IRecoverableIteratorを一般Iteratorをに変換します。
     """
     def __init__(self,iter:Iterator):
         self._iter=iter

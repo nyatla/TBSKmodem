@@ -32,11 +32,9 @@ class ByteStream(BasicByteStream,IByteStream):
         super().__init__()
         self._pos:int #現在の読み出し位置
         self._iter:Iterator[int]
-        self._q:List #読み出しバッファ。
         def __init__A(src:Iterator[int],inital_pos:int=0):
             self._pos=inital_pos #現在の読み出し位置
             self._iter:Iterator[int]=src
-            self._q=list() #読み出しバッファ。
         def __init__B(src:Iterable[int],inital_pos:int=0):
             __init__A(iter(src),inital_pos)
         def __init__C(src:bytes,inital_pos:int=0):

@@ -1,17 +1,18 @@
 from typing import TypeVar
 from ..types import Iterator
 from .RingBuffer import RingBuffer
-from .recoverable import RecoverableIterator, RecoverableStopIteration
+from .recoverable import RecoverableStopIteration
+from ..interfaces import IRecoverableIterator
 
 T=TypeVar("T")
-class SumIterator(RecoverableIterator[T]):
+class SumIterator(IRecoverableIterator[T]):
     """ ストリームの読み出し位置から過去N個の合計を返すイテレータです。
         このイテレータはRecoverableStopInterationを利用できます。
     """
     def __init__(self,src:Iterator[T],length:int):
         self._src=src
         self._buf=RingBuffer[T](length,0)
-        self._sum=0
+        self._sum:float=0
         # self._length=length
         # self._num_of_input=0
         self._gen=None

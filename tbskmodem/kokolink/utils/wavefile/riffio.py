@@ -31,7 +31,7 @@ from typing import Union,overload
 from abc import ABC, abstractproperty
 from io import BytesIO,RawIOBase
 
-from ...types import Sequence,Tuple
+from ...types import Sequence,Tuple,List
 
 class Chunk(ABC):
     """チャンクのベースクラス。
@@ -53,7 +53,7 @@ class Chunk(ABC):
     def data(self)->bytearray:
         """チャンクデータ部分です。このサイズはワード境界ではありませぬ。
         """
-        ...
+        raise NotImplementedError ()
     def toChunkBytes(self)->bytes:
         """チャンクのバイナリ値に変換します。このデータはワード境界です。
         """
@@ -79,20 +79,20 @@ class ChunkHeader(Chunk,ABC):
     def __init__(self,*args):
         self._size:int
         self._form:bytes        
-        def __init__1(self,fp:RawIOBase):
+        def __init__1(fp:RawIOBase):
             name,size,form=struct.unpack_from('<4sL4s',fp.read(12))
-            super().__init__(name,size)
+            super(ChunkHeader,self).__init__(name,size)
             self._form=form
             return
-        def __init__3(self,name:str,size:int,form:bytes):
+        def __init__3(name:str,size:int,form:bytes):
             # print(name,size,form)
-            super().__init__(name,size)
+            super(ChunkHeader,self).__init__(name,size)
             self._form=form
             return
         if len(args)==1:
-            __init__1(self,*args)
+            __init__1(*args)
         elif len(args)==3:
-            __init__3(self,*args)
+            __init__3(*args)
         else:
             ValueError()            
     @property
@@ -119,11 +119,11 @@ class RawChunk(Chunk):
         ...
     def __init__(self,*args):
         self._data:bytes
-        def __init__2(self,name:bytes,data:bytes):
-            super().__init__(name,len(data))
+        def __init__2(name:bytes,data:bytes):
+            super(RawChunk,self).__init__(name,len(data))
             self._data=data
-        def __init__3(self,name:bytes,size:int,fp:RawIOBase):
-            super().__init__(name,size)
+        def __init__3(name:bytes,size:int,fp:RawIOBase):
+            super(RawChunk,self).__init__(name,size)
             # data=bytearray()
             # data.extend(fp.read(size))
             data=fp.read(size)
@@ -132,9 +132,9 @@ class RawChunk(Chunk):
             self._data=data
             # assert(self.size==len(rawdata)-8)
         if len(args)==2:
-            __init__2(self,*args)
+            __init__2(*args)
         elif len(args)==3:
-            __init__3(self,*args)
+            __init__3(*args)
         else:
             ValueError()
     @property
@@ -152,24 +152,24 @@ class fmtChunk(RawChunk):
     def __init__(self,framerate:int,samplewidth:int,nchannels:int):
         ...
     def __init__(self,*args):
-        def __init__2(self,size:int,fp:RawIOBase):
-            super().__init__(b"fmt ",size,fp)
+        def __init__2(size:int,fp:RawIOBase):
+            super(fmtChunk,self).__init__(b"fmt ",size,fp)
             fmt,ch=struct.unpack("<HH",self._data[0:4])
             if fmt!=WAVE_FORMAT_PCM:
                 raise TypeError("Invalid Format FORMAT=%d,CH=%d"%(fmt,ch))
             # print(self.samplewidth)
-        def __init__3(self,framerate:int,samplewidth:int,nchannels:int):
+        def __init__3(framerate:int,samplewidth:int,nchannels:int):
             # print(framerate,samplewidth,nchannels)
             d=struct.pack(
                 '<HHLLHH',
                 WAVE_FORMAT_PCM, nchannels, framerate,
                 nchannels * framerate * samplewidth,
                 nchannels * samplewidth,samplewidth * 8)
-            super().__init__(b"fmt ",d)
+            super(fmtChunk,self).__init__(b"fmt ",d)
         if len(args)==2:
-            __init__2(self,*args)
+            __init__2(*args)
         elif len(args)==3:
-            __init__3(self,*args)
+            __init__3(*args)
         else:
             raise ValueError()
     @property
@@ -195,14 +195,14 @@ class dataChunk(RawChunk):
     def __init__(self,data:bytes):
         ...
     def __init__(self,*args):
-        def __init__1(self,data:bytes):
-            super().__init__(b"data",data)
-        def __init__2(self,size:int,fp:RawIOBase):
-            super().__init__(b"data",size,fp)
+        def __init__1(data:bytes):
+            super(dataChunk,self).__init__(b"data",data)
+        def __init__2(size:int,fp:RawIOBase):
+            super(dataChunk,self).__init__(b"data",size,fp)
         if len(args)==1:
-            __init__1(self,*args)
+            __init__1(*args)
         elif len(args)==2:
-            __init__2(self,*args)
+            __init__2(*args)
         else:
             ValueError()            
 
@@ -214,14 +214,14 @@ class RiffHeader(ChunkHeader):
     def __init__(self,size:int,form:bytes):
         ...
     def __init__(self,*args):
-        def __init__2(self,size:int,form:bytes):
-            super().__init__(b"RIFF",size,form)
+        def __init__2(size:int,form:bytes):
+            super(RiffHeader,self).__init__(b"RIFF",size,form)
 
         if len(args)==1:
             super().__init__(*args)
             assert(self.name==b"RIFF")
         elif len(args)==2:
-            __init__2(self,*args)
+            __init__2(*args)
         else:
             ValueError(args)
 
@@ -231,22 +231,22 @@ class RawListChunk(ChunkHeader):
     @overload
     def __init__(self,size:int,form:bytes,fp:RawIOBase):
         ...
-    @overload
-    def __init__(self,size:int,form:bytes):
-        ...
+    # @overload
+    # def __init__(self,size:int,form:bytes):
+    #     ...
     def __init__(self,*args):
         self._payload:bytes
         # def __init__1(self,fp):
         #     super().__init__(*args)
         #     self._payload=fp.read(self.size)
-        def __init__3(self,size:int,form:bytes,fp:RawIOBase):
-            super().__init__(b"LIST",size,form)
+        def __init__3(size:int,form:bytes,fp:RawIOBase):
+            super(RawListChunk,self).__init__(b"LIST",size,form)
             self._payload=fp.read(size)
-        if len(args)==2:
-            pass
-            # __init__1(self,*args)
-        elif len(args)==3:
-            __init__3(self,*args)
+        # if len(args)==2:
+        #     pass
+        #     # __init__1(self,*args)
+        if len(args)==3:
+            __init__3(*args)
         else:
             ValueError()            
         assert(self._name==b"LIST")
@@ -264,15 +264,15 @@ class InfoItemChunk(RawChunk):
     def __init__(self,name:bytes,size:int,fp:RawIOBase):
         ...
     def __init__(self,*args):
-        def __init__2(self,name:bytes,data:bytes):
+        def __init__2(name:bytes,data:bytes):
             assert(len(name)==4)
-            super().__init__(name,data)
-        def __init__3(self,name:bytes,size:int,fp:RawIOBase):
-            super().__init__(name,size,fp)
+            super(InfoItemChunk,self).__init__(name,data)
+        def __init__3(name:bytes,size:int,fp:RawIOBase):
+            super(InfoItemChunk,self).__init__(name,size,fp)
         if len(args)==2:
-            __init__2(self,*args)
+            __init__2(*args)
         elif len(args)==3:
-            __init__3(self,*args)
+            __init__3(*args)
     def _summary_dict(self)->dict:
         return dict(super()._summary_dict(),**{"value":self.data})
 
@@ -284,7 +284,7 @@ class InfoListChunk(ChunkHeader):
     def __init__(self,size:int,fp:RawIOBase):
         ...
     @overload
-    def __init__(self,items:Sequence[Union[InfoItemChunk,Tuple[bytes,bytes]]]):
+    def __init__(self,items:Sequence[InfoItemChunk]):
         """
         Args:
         items
@@ -294,33 +294,30 @@ class InfoListChunk(ChunkHeader):
         ...
     def __init__(self,*args):
         self._items:Tuple[InfoItemChunk]
-        def __init__2(self,size:int,fp:RawIOBase):
-            super().__init__(b"LIST",size,b"INFO")
+        def __init__2(size:int,fp:RawIOBase):
+            super(InfoListChunk,self).__init__(b"LIST",size,b"INFO")
             #Infoパーサ
             read_size=4
             items=[]
             while read_size<self._size:
-                name,size=struct.unpack_from('<4sL',fp.read(8))
-                item=InfoItemChunk(name,size,fp)
-                read_size+=size+size%2+8
+                name,rsize=struct.unpack_from('<4sL',fp.read(8))
+                item=InfoItemChunk(name,rsize,fp)
+                read_size+=rsize+rsize%2+8
                 items.append(item)
             self._items=items
-        def __init__1(self,items:Sequence[InfoItemChunk]):
+        def __init__1(items:Sequence[InfoItemChunk]):
             #itemsの整形
             d=[]
             for i in items:
-                if isinstance(i,InfoItemChunk):
-                    d.append(i)
-                else:
-                    d.append(InfoItemChunk(i[0],i[1]))
+                d.append(i)
             
             s=sum([i.size+i.size%2+8 for i in d])
             self._items=d
-            super().__init__(b"LIST",s,b"INFO")
+            super(InfoListChunk,self).__init__(b"LIST",s,b"INFO")
         if len(args)==1:
-            __init__1(self,*args)
+            __init__1(*args)
         elif len(args)==2:
-            __init__2(self,*args)
+            __init__2(*args)
         else:
             ValueError()            
         assert(self._name==b"LIST")
@@ -353,8 +350,8 @@ class WaveFile(RiffHeader):
         ...
     def __init__(self,*args):
         self._chunks:Sequence[Chunk]
-        def __init__1(self,fp:RawIOBase):
-            super().__init__(fp)
+        def __init__1(fp:RawIOBase):
+            super(WaveFile,self).__init__(fp)
             assert(self._form==b"WAVE")
             read_size=4
             chunks=[]
@@ -364,7 +361,7 @@ class WaveFile(RiffHeader):
                 # assert(size%2==0)
                 if name==b"fmt ":
                     chunks.append(fmtChunk(size,fp))
-                elif name==b"data ":
+                elif name==b"data":
                     chunks.append(dataChunk(size,fp))
                 elif name==b"LIST":
                     fmt=struct.unpack_from("<4s",fp.read(4))[0]
@@ -375,24 +372,24 @@ class WaveFile(RiffHeader):
                 else:
                     chunks.append(RawChunk(name,size,fp))
             self._chunks=chunks
-        def __init__4_5(self,samplerate:int,samplewidth:int,nchannel:int,frames:bytes,extchunks:Sequence[Chunk]=None):
+        def __init__4_5(samplerate:int,samplewidth:int,nchannel:int,frames:bytes,extchunks:Sequence[Chunk]=None):
             if len(frames)%(samplewidth*nchannel)!=0:
                 ValueError("fammes length {0}%(samplewidth {1} * nchannel {2})".format(frames,samplewidth,nchannel))
             fmt_chunk=fmtChunk(samplerate,samplewidth,nchannel)
             data_chunk=dataChunk(frames)
-            chunks=[fmt_chunk,data_chunk]
+            chunks:List[Chunk]=[fmt_chunk,data_chunk]
             if extchunks is not None:
                 chunks.extend(extchunks)
             s=sum([i.size+i.size%2+8 for i in chunks])+4
-            super().__init__(s,b"WAVE")
+            super(WaveFile,self).__init__(s,b"WAVE")
             self._chunks=chunks        
             # super().__init__(len(self.data),b"WAVE")
 
         al=len(args)
         if al==5 or al==4:
-            __init__4_5(self,*args)
+            __init__4_5(*args)
         elif al==1:
-            __init__1(self,*args)
+            __init__1(*args)
         else:
             ValueError()
     @property
@@ -430,28 +427,28 @@ if __name__ == '__main__':
 
         n=WaveFile(44100,2,2,r.chunk(b"data").data,[
             InfoListChunk([
-                    (b"IARL",b"The location where the subject of the file is archived"),
-                    (b"IART",b"The artist of the original subject of the file"),
-                    (b"ICMS",b"The name of the person or organization that commissioned the original subject of the file"),
-                    (b"ICMT",b"General comments about the file or its subject"),
-                    (b"ICOP",b"Copyright information about the file (e.g., 'Copyright Some Company 2011')"),
-                    (b"ICRD",b"The date the subject of the file was created (creation date)"),
-                    (b"ICRP",b"Whether and how an image was cropped"),
-                    (b"IDIM",b"The dimensions of the original subject of the file"),
-                    (b"IDPI",b"Dots per inch settings used to digitize the file"),
-                    (b"IENG",b"The name of the engineer who worked on the file"),
-                    (b"IGNR",b"The genre of the subject"),
-                    (b"IKEY",b"A list of keywords for the file or its subject"),
-                    (b"ILGT",b"Lightness settings used to digitize the file"),
-                    (b"IMED",b"Medium for the original subject of the file"),
-                    (b"INAM",b"Title of the subject of the file (name)"),
-                    (b"IPLT",b"The number of colors in the color palette used to digitize the file"),
-                    (b"IPRD",b"Name of the title the subject was originally intended for"),
-                    (b"ISBJ",b"Description of the contents of the file (subject)"),
-                    (b"ISFT",b"Name of the software package used to create the file"),
-                    (b"ISRC",b"The name of the person or organization that supplied the original subject of the file"),
-                    (b"ISRF",b"The original form of the material that was digitized (source form)"),
-                    (b"ITCH",b"The name of the technician who digitized the subject file"),]
+                    InfoItemChunk(b"IARL",b"The location where the subject of the file is archived"),
+                    InfoItemChunk(b"IART",b"The artist of the original subject of the file"),
+                    InfoItemChunk(b"ICMS",b"The name of the person or organization that commissioned the original subject of the file"),
+                    InfoItemChunk(b"ICMT",b"General comments about the file or its subject"),
+                    InfoItemChunk(b"ICOP",b"Copyright information about the file (e.g., 'Copyright Some Company 2011')"),
+                    InfoItemChunk(b"ICRD",b"The date the subject of the file was created (creation date)"),
+                    InfoItemChunk(b"ICRP",b"Whether and how an image was cropped"),
+                    InfoItemChunk(b"IDIM",b"The dimensions of the original subject of the file"),
+                    InfoItemChunk(b"IDPI",b"Dots per inch settings used to digitize the file"),
+                    InfoItemChunk(b"IENG",b"The name of the engineer who worked on the file"),
+                    InfoItemChunk(b"IGNR",b"The genre of the subject"),
+                    InfoItemChunk(b"IKEY",b"A list of keywords for the file or its subject"),
+                    InfoItemChunk(b"ILGT",b"Lightness settings used to digitize the file"),
+                    InfoItemChunk(b"IMED",b"Medium for the original subject of the file"),
+                    InfoItemChunk(b"INAM",b"Title of the subject of the file (name)"),
+                    InfoItemChunk(b"IPLT",b"The number of colors in the color palette used to digitize the file"),
+                    InfoItemChunk(b"IPRD",b"Name of the title the subject was originally intended for"),
+                    InfoItemChunk(b"ISBJ",b"Description of the contents of the file (subject)"),
+                    InfoItemChunk(b"ISFT",b"Name of the software package used to create the file"),
+                    InfoItemChunk(b"ISRC",b"The name of the person or organization that supplied the original subject of the file"),
+                    InfoItemChunk(b"ISRF",b"The original form of the material that was digitized (source form)"),
+                    InfoItemChunk(b"ITCH",b"The name of the technician who digitized the subject file"),]
                     )])
         with open("ssss3.wav","wb") as g:
             g.write(n.toChunkBytes())

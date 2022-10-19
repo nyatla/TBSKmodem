@@ -8,11 +8,12 @@ class XorShiftRand31(Iterator[int]):
             next(self)
     def __next__(self) -> int:
         y=self._seed
-        y = y ^ (y << 13); y = y ^ (y >> 17)
+        y = y ^ (y << 13)
+        y = y ^ (y >> 17)
         y = y ^ (y << 5)
-        self._seed=y & 0x7fffffff
-        return y
-    def randRange(self,limit:int):
+        self._seed=y
+        return y & 0x7fffffff
+    def randRange(self,limit:int)->int:
         """ 0<=n<limit-1の値を返します。
         """
         return next(self) % limit

@@ -5,12 +5,14 @@
 from typing import TypeVar,Generic
 from abc import abstractmethod,ABC, abstractproperty
 
-from .utils.recoverable import RecoverableIterator
-from .types import Tuple
+
+from .types import Tuple,Iterator
 T=TypeVar("T")
 
+class IRecoverableIterator(Iterator[T],Generic[T]):
+    ...
 
-class IRoStream(RecoverableIterator[T],Generic[T],ABC):
+class IRoStream(IRecoverableIterator[T],Generic[T],ABC):
     """gets/getを備えた読み出し専用ストリームです。Iteratorと互換性があります。
     このストリームは内部状態を持つ読み出しストリームに使用できます。
     """

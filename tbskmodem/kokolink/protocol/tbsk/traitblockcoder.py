@@ -9,8 +9,7 @@ from ...utils import SumIterator
 from .toneblock import TraitTone
 from ...types import Deque, Iterator,Tuple
 
-class WaitForInputException(Exception):
-    ...
+
 
 
 
@@ -30,11 +29,11 @@ class AverageInterator(SumIterator[T]):
         ...
     def __init__(self,*args,**kwds):
         self._length:int
-        def __init__B(src:Iterator[T],ticks:int):
-            super(self.__class__,self).__init__(src,ticks)
+        def __init__B(self:AverageInterator,src:Iterator[T],ticks:int):
+            super().__init__(src,ticks)
             self._length=ticks
         if isinstances(args,(Iterator,int,)):
-            __init__B(*args,**kwds)
+            __init__B(self,*args,**kwds)
         else:
             raise TypeError()
     def __next__(self) -> T:
@@ -45,7 +44,7 @@ class AverageInterator(SumIterator[T]):
         return r/self._length
 
 
-class TraitBlockEncoder(IEncoder[IBitStream,int],BasicRoStream[float]):
+class TraitBlockEncoder(IEncoder[IBitStream,float],BasicRoStream[float]):
     """ ビット列をTBSK変調した振幅信号に変換します。出力レートは入力のN倍になります。
         N=len(trait_block)*2*len(tone)
         このクラスは、toneを一単位とした信号とtrail_blockとの積を返します。
@@ -66,17 +65,20 @@ class TraitBlockEncoder(IEncoder[IBitStream,int],BasicRoStream[float]):
             __init__B(*args,**kwds)
         else:
             raise TypeError()
-        self._q=None
+        self._tone_q=Deque[float]()
         super().__init__()
     """
         Kビットは,N*K+1個のサンプルに展開されます。
     """
     def setInput(self,src:IBitStream)->"TraitBlockEncoder":
-        self._is_eos=True if src is None else False
+        if src is None:
+            self._is_eos=True
+        else:
+            self._is_eos=False
+        self._tone_q.clear()
+        # print(len(self._tone_q))
         self._pos=0
         self._src=src
-        self._tone_q=Deque[float]()
-        # print(len(self._tone_q))
         return self
     def __next__(self)->float:
         if len(self._tone_q)==0:
@@ -109,6 +111,7 @@ class TraitBlockDecoder(IBitStream,IDecoder[IRoStream[float],int],BasicRoStream[
         self._trait_block_ticks:int
         self._avefilter:AverageInterator[float]
         self._threshold:float
+        self._last_data:float
         self._is_eos:bool=True
         def __init__B(trait_block_ticks:int,threshold:float=0.2):
             self._trait_block_ticks=trait_block_ticks
@@ -117,7 +120,7 @@ class TraitBlockDecoder(IBitStream,IDecoder[IRoStream[float],int],BasicRoStream[
             __init__B(*args,**kwds)
         else:
             raise TypeError()
-        self._q=None
+        return
     class getResultAsint(int):
         def __new__(cls,v:int,ext:Tuple[int,float,int]):
             """
@@ -147,23 +150,26 @@ class TraitBlockDecoder(IBitStream,IDecoder[IRoStream[float],int],BasicRoStream[
                 src
                     TBSK信号の開始エッジにポインタのあるストリームをセットします。
         """
-        self._is_eos=True if src is None else False
-        self._pos=0
-        self._src=src
-        self._cof=SelfCorrcoefIterator(self._trait_block_ticks,src,self._trait_block_ticks)
-        ave_window=max(int(self._trait_block_ticks*0.1),2) #検出用の平均フィルタは0.1*len(tone)//2だけずれてる。個々を直したらtbskmodem#TbskModulatorも直せ
-        self._avefilter=AverageInterator[float](self._cof,ave_window)
-        self._last_data=0
+        if src is None:
+            self._is_eos=True
+        else:
+            self._is_eos=False        
+            self._cof=SelfCorrcoefIterator(self._trait_block_ticks,src,self._trait_block_ticks)
+            ave_window=max(int(self._trait_block_ticks*0.1),2) #検出用の平均フィルタは0.1*len(tone)//2だけずれてる。個々を直したらtbskmodem#TbskModulatorも直せ
+            self._avefilter=AverageInterator[float](self._cof,ave_window)
+            self._last_data=0
 
-        self._preload_size=self._trait_block_ticks+ave_window//2-1    #平均値フィルタの初期化サイズ。ave_window/2足してるのは、平均値の遅延分.
-        self._block_skip_size=self._trait_block_ticks-1-2 #スキップ数
-        self._block_skip_counter=self._block_skip_size #スキップ数
-        self._samples=[] #観測値
-        self._shift=0
+            self._preload_size=self._trait_block_ticks+ave_window//2-1    #平均値フィルタの初期化サイズ。ave_window/2足してるのは、平均値の遅延分.
+            self._block_skip_size=self._trait_block_ticks-1-2 #スキップ数
+            self._block_skip_counter=self._block_skip_size #スキップ数
+            self._samples=[] #観測値
+            self._shift=0
         # try:
         #     [next(self._avefilter) for i in range(self._trait_block_ticks+ave_window//2)]
         # except StopIteration:
         #     self._is_eos=True
+        self._pos=0
+        self._src=src
         return self
                     
     def __next__(self)->int:
@@ -172,37 +178,37 @@ class TraitBlockDecoder(IBitStream,IDecoder[IRoStream[float],int],BasicRoStream[
         try:
             #この辺の妙なカウンターはRecoverableStopInterationのため
 
-
+            lavefilter=self._avefilter
             #平均イテレータの初期化(初めの一回目だけ)
             while self._preload_size>0:
-                next(self._avefilter)
+                next(lavefilter)
                 self._preload_size=self._preload_size-1
             #ブロックヘッダの読み出し(1ブロック読出しごとにリセット)
             while self._block_skip_counter>0:
-                next(self._avefilter)
+                next(lavefilter)
                 self._block_skip_counter=self._block_skip_counter-1
             while len(self._samples)<3:
-                self._samples.append(next(self._avefilter))
+                self._samples.append(next(lavefilter))
 
 
 
 
-            r=self._samples[1]
-            sample=self._samples
-            if sample[0]*sample[1]<0 or sample[1]*sample[2]<0:
+            samples=self._samples
+            r=samples[1]
+            if samples[0]*samples[1]<0 or samples[1]*samples[2]<0:
                 #全ての相関値が同じ符号でなければ何もしない
                 self._block_skip_counter=self._block_skip_size #リセット
             else:
                 #全ての相関値が同じ符号
-                samples=[abs(i) for i in self._samples]
+                asamples=[abs(i) for i in samples]
                 #一番大きかったインデクスを探す
-                if samples[1]>samples[0] and samples[1]>samples[2]:
+                if asamples[1]>asamples[0] and asamples[1]>asamples[2]:
                     #遅れも進みもしてない
                     pass
-                elif samples[0]>samples[2]:
+                elif asamples[0]>asamples[2]:
                     #探索場所が先行してる
                     self._shift=self._shift-1
-                elif samples[0]<samples[2]:
+                elif asamples[0]<asamples[2]:
                     #探索場所が遅行してる
                     self._shift=self._shift+1
                 else:

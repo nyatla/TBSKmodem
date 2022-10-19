@@ -27,7 +27,6 @@ class SinTone(TraitTone):
     def __init__(self,points:int,cycle:int=1):
         ...
     def __init__(self,*args,**kwds):
-        self._tone:Tuple
         def __init__A(points:int,cycle:int=1):
             s=math.pi*2/points*0.5
             super(type(self),self).__init__([math.sin(s+i*math.pi*2/points) for i in range(points)]*cycle)
@@ -46,13 +45,12 @@ class MSeqTone(TraitTone):
     def __init__(self,bits:int,tap:int,base_tone:TraitTone=None):
         ...
     def __init__(self,*args,**kwds):
-        self._tone:Tuple
         self._sequence:Tuple(int)
         def __init__A(bits:int,tap:int,base_tone:TraitTone=None):
             ms=MSequence(bits,tap).getOneCycle()
             tone=base_tone if base_tone is not None else SinTone(20,1)
             self._sequence=tuple(ms)
-            a=sum([[j*(i*2-1) for j in tone] for i in ms],[])
+            a=sum([[j*(i*2-1) for j in tone] for i in ms],[]) #flatten
             super(type(self),self).__init__(a)
 
         if isinstances(args,(int,int),(kwds,{"base_tone":TraitTone})):
@@ -74,12 +72,11 @@ class PnTone(TraitTone):
     def __init__(self,seed:int,interval:int=2,base_tone:TraitTone=None):
         ...
     def __init__(self,*args,**kwds):
-        self._tone:Tuple
         def __init__A(seed:int,interval:int=2,base_tone:TraitTone=None):
             tone=base_tone if base_tone is not None else SinTone(20,8)
             pn=XorShiftRand31(seed,skip=29)
             c=0
-            f:int
+            f:int=0
             d=[]
             for i in tone:
                 if c%interval==0:
@@ -105,17 +102,15 @@ class XPskSinTone(TraitTone):
         """
         ...
     class DefaultIter(Iterator[int]):
-        def __init__(self,delta):
+        def __init__(self):
             self._pn=XorShiftRand31(999,skip=299)
-            self._d=delta
         def __next__(self)->int:
             return ((next(self._pn)&0x01)*2-1)
     def __init__(self,*args,**kwds):
-        self._tone:Tuple
         def __init__A(points:int,cycle:int=1,div:int=8,shift:Iterator[int]=None):
 
             delta=math.pi*2/points
-            shift=self.DefaultIter(delta) if shift is None else shift
+            shift=self.DefaultIter() if shift is None else shift
             s=delta*0.5
             d=[]
             for i in range(points*cycle):

@@ -1,6 +1,8 @@
 
 from typing import TypeVar,Union
 
+from tbskmodem.kokolink.protocol.tbsk.toneblock import TraitTone
+
 from ....types import NoneType,Generator, Tuple,Sequence
 from ....interfaces import IRoStream
 from ....utils.recoverable import GeneratorRecoverException, RecoverableStopIteration
@@ -14,7 +16,7 @@ T=TypeVar("T")
 class CoffPreamble(Preamble):
     """ 台形反転信号プリアンブルです。
     """
-    def __init__(self,tone:Sequence[float],threshold:float=1.0,cycle=4):
+    def __init__(self,tone:TraitTone,threshold:float=1.0,cycle:int=4):
         self._threshold=threshold
         self._symbol=tone
         self._cycle=cycle #平坦部分のTick数
@@ -49,11 +51,11 @@ class CoffPreamble(Preamble):
             cycle=self._cycle
             cofbuf_len=symbol_ticks*(6+cycle*2)
             # cofbuf_len=symbol_ticks*10
-            cof=BufferedIterator[float](SelfCorrcoefIterator(symbol_ticks,src,symbol_ticks),cofbuf_len)
+            cof=BufferedIterator[float](SelfCorrcoefIterator(symbol_ticks,src,symbol_ticks),cofbuf_len,0)
             avi=AverageInterator[float](cof,symbol_ticks)
             sample_width=cycle+1
             # rb=RingBuffer(symbol_ticks*3,0)
-            rb=RingBuffer(symbol_ticks*sample_width,0)
+            rb=RingBuffer[float](symbol_ticks*sample_width,0)
             th=self._threshold
             nor=0 #ストリームから読みだしたTick数
             try:

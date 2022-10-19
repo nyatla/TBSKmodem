@@ -6,17 +6,10 @@ class RingBuffer(Generic[T]):
     """ スライス可能なリングバッファ。
     """
     @overload
-    def __init__(self,length:int,pad:T=None):
-        ...
-    @overload
-    def __init__(self,buf:Sequence[T]):
+    def __init__(self,length:int,pad:T):
         ...
     def __init__(self,*args,**kwds):
-        if len(args)==1 and isinstance(args[0],int):
-            self._buf=[None]*args[0]
-        elif len(args)==1 and isinstance(args[0],Sequence):
-            self._buf=args[0]
-        elif len(args)==2 or (len(args)==1 and "pad" in kwds):
+        if len(args)==2: #2引数の時だけにした
             self._buf=[args[1]]*args[0]
         else:
             raise TypeError()
@@ -36,10 +29,9 @@ class RingBuffer(Generic[T]):
         """ リストの一部を切り取って返します。
             この関数はバッファの再配置を行いません。
         """
-        p:int
-        l=len(self._buf)
+        l:int=len(self._buf)
         if pos>=0:
-            p=self._p+pos
+            p:int=self._p+pos
             if size>=0:
                 assert(pos+size<=l)
                 return tuple([self._buf[(p+i)%l] for i in range(size)])
@@ -47,7 +39,7 @@ class RingBuffer(Generic[T]):
                 assert(pos+size+1>=0)
                 return tuple([self._buf[(p+size+i+1)%l] for i in range(-size)])
         else:
-            p=self._p+l+pos
+            p:int=self._p+l+pos
             if size>=0:
                 assert(l+pos+size<=l)
                 return tuple([self._buf[(p+i)%l] for i in range(size)])
@@ -66,8 +58,8 @@ class RingBuffer(Generic[T]):
     def top(self)->T:
         """ バッファの先頭 最も古い要素"""
         return self._buf[self._p]
-    def __iter__(self)->List:
-        return self[:]
+    # def __iter__(self)->List:
+    #     return self[:] #いらないとおもう。
 
     def __getitem__(self,s)->List[T]:
         """ 通常のリストにして返します。

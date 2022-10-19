@@ -23,7 +23,7 @@ def float2bytes(fdata:Sequence[float],bits:int)->bytes:
         # print(a==b)
         # assert(a==b)
         # return np.array([i*127+128 for i in fdata]).astype("uint8").tobytes()
-        return b"".join([struct.pack("B",int(i*127+128)) for i in fdata])
+        return b"".join([struct.pack("B",int(i*127+128)) for i in fdata]) #unsigned byte
     elif bits==16:
         r=(2**16-1)//2 #Daisukeパッチ
         # a=b"".join([struct.pack("<h",int(i*r)) for i in fdata])
@@ -31,7 +31,7 @@ def float2bytes(fdata:Sequence[float],bits:int)->bytes:
         # print(a==b)
         # assert(a==b)
         # return np.array([i*r for i in fdata]).astype("int16").tobytes()
-        return b"".join([struct.pack("<h",int(i*r)) for i in fdata])
+        return b"".join([struct.pack("<h",int(i*r)) for i in fdata]) #signed short
     raise ValueError()
 
 class PcmData:
@@ -51,7 +51,7 @@ class PcmData:
         wav=WaveFile(fp)
         fmtc:fmtChunk=wav.chunk(b"fmt ")
         datac:RawChunk=wav.chunk(b"data")
-        assert(fmtc.nchannels==1)
+        assert(fmtc is not None and datac is not None and fmtc.nchannels==1)
         bits=fmtc.samplewidth
         fs=fmtc.framerate
         if chunks is None:
@@ -99,7 +99,7 @@ class PcmData:
         """
         return self._frame_rate
     @property
-    def timelen(self):
+    def timelen(self)->float:
         """データの記録時間
         """
         return len(self._frames)/(self._sample_bits//8*self._frame_rate)

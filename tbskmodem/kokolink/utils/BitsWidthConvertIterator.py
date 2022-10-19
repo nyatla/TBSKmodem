@@ -2,13 +2,14 @@
     
 """
 from ..types import Iterator
+from ..interfaces import IRecoverableIterator
 from ..utils.recoverable import RecoverableStopIteration
 
 
 class StopIteration_BitsWidthConvertIterator_FractionalBitsLeft(StopIteration):
     ...
 
-class BitsWidthConvertIterator(Iterator[int]):
+class BitsWidthConvertIterator(IRecoverableIterator[int]):
     """ 任意ビット幅のintストリームを任意ビット幅のint値に変換するイテレータです。
     """
     def __init__(self,src:Iterator[int],input_bits:int=8,output_bits:int=1):

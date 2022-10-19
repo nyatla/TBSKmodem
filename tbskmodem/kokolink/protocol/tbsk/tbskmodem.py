@@ -1,10 +1,10 @@
 from itertools import chain
 from typing import overload,Union
 
-from ...types import NoneType, Iterable, Iterator,Generator
-from ...utils.recoverable import GeneratorRecoverException, RecoverableException, RecoverableStopIteration,RecoverableIterator
+from ...types import NoneType, Iterable, Iterator,Generator,Tuple
+from ...utils.recoverable import GeneratorRecoverException, RecoverableException, RecoverableStopIteration
 from ...utils.functions import isinstances
-from ...interfaces import IBitStream, IFilter,IRoStream
+from ...interfaces import IBitStream, IFilter,IRoStream,IRecoverableIterator
 from ...filter import BitsWidthFilter,Bits2BytesFilter,Bits2StrFilter
 from ...streams import ByteStream
 from ...streams.rostreams import BasicRoStream
@@ -18,18 +18,26 @@ from .preamble import Preamble,CoffPreamble
 
 
 import struct
-class Bits2HexStrFilter(BitsWidthFilter):
+class Bits2HexStrFilter(IFilter[IRoStream[int],str],BasicRoStream[str]):
     """ nBit intイテレータから1バイト単位のhex stringを返すフィルタです。
     """
     def __init__(self,input_bits:int=1):
-        super().__init__(input_bits=input_bits,output_bits=8)
+        self._src=BitsWidthFilter(input_bits=input_bits,output_bits=8)
     def __next__(self) -> str:
         while True:
             try:
-                d=super().__next__()
+                d=self._src.__next__()
             except RecoverableStopIteration:
                 raise
             return bytes.hex(struct.pack("1B",d))
+    def setInput(self,src:IRoStream[int])->"Bits2HexStrFilter":
+        self._src.setInput(src)
+        return self
+    @property
+    def pos(self)->int:
+        return self._src.pos
+
+
 
 
 
@@ -104,7 +112,7 @@ class TbskModulator:
             sstr=src
         if sstr[:2]=="0x":
             sstr=sstr[2:]
-            print(sstr)
+            # print(sstr)
         return self.modulate(bytes.fromhex(sstr))
     @overload
     def modulate(self,src:Iterable[int],bitwidth:int=8)->Iterator[float]:
@@ -148,7 +156,7 @@ class TbskDemodulator:
         self._tone=tone
         self._pa_detector=preamble if preamble is not None else CoffPreamble(tone,threshold=1.0)
         self._recover_lock=0
-    def _common_gen(self,src:Union[IRoStream[int],Iterable[int],Iterator[int]],filter:IFilter[IRoStream[int],any])->Generator[TraitBlockDecoder,NoneType,NoneType]:
+    def _common_gen(self,src:Union[IRoStream[int],Iterable[int],Iterator[int]],filter:IFilter[IRoStream[int],any])->Generator[Tuple[Exception,IRoStream[int]],NoneType,NoneType]:
         assert(self._recover_lock==0)        
         tone_ticks=len(self._tone)
         stream=src if isinstance(src,IRoStream) else RoStream(src)
@@ -174,29 +182,30 @@ class TbskDemodulator:
                         raise
             if peak_offset is None:
                 yield None,None #waitForSymbolがStopIntertionを出したときは終端到達。
-            while True:
-                try:
-                    # print(">>",peak_offset+stream.pos)
-                    stream.seek(tone_ticks+peak_offset) #同期シンボル末尾に移動
-                    # print(">>",stream.pos)
-                    break
-                except RecoverableStopIteration as e:
-                    yield e,None
-                    continue
-                except StopIteration as e:
-                    # print("KILLED2")
-                    yield None,None #waitForSymbolがStopIntertionを出したときは終端到達。
-                    return
-
-            tbd=TraitBlockDecoder(tone_ticks)
-            if filter is None:
-                yield None,tbd.setInput(stream)
             else:
-                yield None,filter.setInput(tbd.setInput(stream))
+                while True:
+                    try:
+                        # print(">>",peak_offset+stream.pos)
+                        stream.seek(tone_ticks+peak_offset) #同期シンボル末尾に移動
+                        # print(">>",stream.pos)
+                        break
+                    except RecoverableStopIteration as e:
+                        yield e,None
+                        continue
+                    except StopIteration as e:
+                        # print("KILLED2")
+                        yield None,None #waitForSymbolがStopIntertionを出したときは終端到達。
+                        return
+
+                tbd=TraitBlockDecoder(tone_ticks)
+                if filter is None:
+                    yield None,tbd.setInput(stream)
+                else:
+                    yield None,filter.setInput(tbd.setInput(stream))
         finally:
             self._recover_lock=self._recover_lock-1
 
-    def demodulateAsBit(self,src:Union[Iterator[float],Iterator[float]])->TraitBlockDecoder:
+    def demodulateAsBit(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[int]:
         """ TBSK信号からビットを復元します。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
         """
@@ -212,7 +221,7 @@ class TbskDemodulator:
         else:
             raise RuntimeError(e)
 
-    def demodulateAsInt(self,src:Union[Iterator[float],Iterator[float]],bitwidth:int=8)->RecoverableIterator[int]:
+    def demodulateAsInt(self,src:Union[Iterator[float],Iterator[float]],bitwidth:int=8)->IRecoverableIterator[int]:
         """ TBSK信号からnビットのint値配列を復元します。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
         """
@@ -231,12 +240,12 @@ class TbskDemodulator:
     
 
 
-    def demodulateAsBytes(self,src:Union[Iterator[float],Iterator[float]])->RecoverableIterator[bytes]:
+    def demodulateAsBytes(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[bytes]:
         """ TBSK信号からバイト単位でbytesを返します。
             途中でストリームが終端した場合、既に読みだしたビットは破棄されます。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。   
         """
-        g:Generator=self._common_gen(src,Bits2BytesFilter())
+        g:Generator=self._common_gen(src,Bits2BytesFilter(input_bits=1))
         e,r=next(g)
         if e is None:
             g.close()
@@ -249,12 +258,12 @@ class TbskDemodulator:
             raise RuntimeError(e)
 
 
-    def demodulateAsStr(self,src:Union[Iterator[float],Iterator[float]],encoding:str="utf-8")->RecoverableIterator[str]:
+    def demodulateAsStr(self,src:Union[Iterator[float],Iterator[float]],encoding:str="utf-8")->IRecoverableIterator[str]:
         """ TBSK信号からsize文字単位でstrを返します。
             途中でストリームが終端した場合、既に読みだしたビットは破棄されます。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
         """
-        g:Generator=self._common_gen(src,Bits2StrFilter(encoding=encoding))        
+        g:Generator=self._common_gen(src,Bits2StrFilter(input_bits=1,encoding=encoding))        
         e,r=next(g)
         if e is None:
             g.close()
@@ -266,7 +275,7 @@ class TbskDemodulator:
         else:
             raise RuntimeError(e)
 
-    def demodulateAsHexStr(self,src:Union[Iterator[float],Iterator[float]])->RecoverableIterator[str]:
+    def demodulateAsHexStr(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[str]:
         g:Generator=self._common_gen(src,Bits2HexStrFilter())        
         e,r=next(g)
         if e is None:

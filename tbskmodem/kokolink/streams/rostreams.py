@@ -1,4 +1,4 @@
-from typing import Union,Generic,TypeVar
+from typing import Deque, Union,Generic,TypeVar
 from abc import ABC
 
 
@@ -16,29 +16,32 @@ class BasicRoStream(IRoStream[T],Generic[T],ABC):
     __next__メソッドの中でself#_posを更新してください。
     """
     def __init__(self):
-        self._savepoint:List=None
+        self._savepoint:Deque[T]=Deque[T]()
     def get(self)->T:
-        if self._savepoint is not None and len(self._savepoint)>0:
+        if len(self._savepoint)>0:
             #読出し済みのものがあったらそれを返す。
-            r=self._savepoint[0]
-            self._savepoint=self._savepoint[1:]
-            if len(self._savepoint)==0:
-                self._savepoint=None
+            r=self._savepoint.popleft()
+            # self._savepoint=self._savepoint[1:]
+            # if len(self._savepoint)==0:
+            #     self._savepoint=None
             return r
         return next(self)
     def gets(self,maxsize:int,fillup:bool=False)->Tuple[T]:
-        r=self._savepoint if self._savepoint is not None else []
-        self._savepoint=None
+        r=self._savepoint
         try:
             for _ in range(maxsize-len(r)):
                 r.append(next(self))
         except RecoverableStopIteration as e:
-            self._savepoint=r
+            # self._savepoint=r
             raise RecoverableStopIteration(e)
         except StopIteration as e:
             if fillup or len(r)==0:
                 raise StopIteration(e)
-        return tuple(r)
+        assert(len(r)<=maxsize)
+        ret=[]
+        while len(r)>0:
+            ret.append(r.popleft())
+        return tuple(ret)
     def seek(self,size:int):
         try:
             self.gets(size,fillup=True)
