@@ -188,7 +188,7 @@ class SoundDeviceInputIterator(IAudioInputInterator):
         def audio_callback(indata, frames, time, status):
             """This is called (from a separate thread) for each audio block."""
             if status:
-                print(status, file=sys.stderr)
+                print("[WARN] "+status, file=sys.stderr)
             a=self.array2float(indata[::, 0],self._samplebits)
             for i in a:
                 self._q.put(i)

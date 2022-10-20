@@ -1,8 +1,10 @@
 from itertools import chain
 from typing import overload,Union
 
+
 from ...types import NoneType, Iterable, Iterator,Generator,Tuple
-from ...utils.recoverable import GeneratorRecoverException, RecoverableException, RecoverableStopIteration
+from ...utils.recoverable import AsyncMethodRecoverException, RecoverableException, RecoverableStopIteration
+from ...utils import AsyncMethod
 from ...utils.functions import isinstances
 from ...interfaces import IBitStream, IFilter,IRoStream,IRecoverableIterator
 from ...filter import BitsWidthFilter,Bits2BytesFilter,Bits2StrFilter
@@ -150,140 +152,137 @@ class TbskModulator:
 
 
 
-
 class TbskDemodulator:
+    class AsyncDemodulateX(AsyncMethod[IRoStream[any]]):
+        def __init__(self,parent:"TbskDemodulator",src:Union[IRoStream[int],Iterable[int],Iterator[int]],filter:IFilter[IRoStream[int],any]):
+            super().__init__()
+            self._tone_ticks=len(parent._tone)
+            self._result=None
+            self._filter=filter
+            self._stream=src if isinstance(src,IRoStream) else RoStream(src)
+            self._peak_offset:int=None
+            self._parent=parent
+            self._wsrex:AsyncMethodRecoverException=None
+            self._co_step=0
+        def close(self):
+            super().close()
+            self._parent._asmethod=None
+        def run(self)->bool:
+            if self._closed:
+                return True            
+            if self._co_step==0:
+                try:
+                    self._peak_offset=self._parent._pa_detector.waitForSymbol(self._stream) #現在地から同期ポイントまでの相対位置
+                    self._co_step=2
+                except AsyncMethodRecoverException as rexp:
+                    self._wsrex=rexp
+                    self._co_step=1
+                    return False
+            if self._co_step==1:
+                try:
+                    self._peak_offset=self._wsrex.recover()
+                    self._wsrex=None
+                    self._co_step=2
+                except AsyncMethodRecoverException as rexp:
+                    self._wsrex=rexp
+                    return False
+            if self._co_step==2:
+                if self._peak_offset is None:
+                    self._result=None
+                    self.close()
+                    return True
+                self._co_step=3
+            if self._co_step==3:
+                try:
+                    # print(">>",peak_offset+stream.pos)
+                    self._stream.seek(self._tone_ticks+self._peak_offset) #同期シンボル末尾に移動
+                    # print(">>",stream.pos)
+                    tbd=TraitBlockDecoder(self._tone_ticks)
+                    if self._filter is None:
+                        self._result=tbd.setInput(self._stream)
+                    else:
+                        self._result=self._filter.setInput(tbd.setInput(self._stream))
+                    self.close()
+                    self._co_step=4
+                    return True
+                except RecoverableStopIteration as e:
+                    return False
+                except StopIteration as e:
+                    self._result=None
+                    self.close()
+                    self._co_step=4
+                    return True
+            raise RuntimeError()
+        @property
+        def result(self)->IRoStream[any]:
+            assert(self._closed)
+            return self._result
+
+
     def __init__(self,tone:TraitTone,preamble:Preamble=None):
         self._tone=tone
         self._pa_detector=preamble if preamble is not None else CoffPreamble(tone,threshold=1.0)
-        self._recover_lock=0
-    def _common_gen(self,src:Union[IRoStream[int],Iterable[int],Iterator[int]],filter:IFilter[IRoStream[int],any])->Generator[Tuple[Exception,IRoStream[int]],NoneType,NoneType]:
-        assert(self._recover_lock==0)        
-        tone_ticks=len(self._tone)
-        stream=src if isinstance(src,IRoStream) else RoStream(src)
-        peak_offset=None
-        self._recover_lock=self._recover_lock+1
-        try:
-            try:
-                peak_offset=self._pa_detector.waitForSymbol(stream) #現在地から同期ポイントまでの相対位置
-            except RecoverableException as rexp:
-                yield RecoverableStopIteration(),None
-                while True:
-                    try:
-                        peak_offset=rexp.recover()
-                        break #成功
-                    except RecoverableException as e:
-                        rexp=e
-                        yield RecoverableStopIteration(),None
-                        continue
-                    except:
-                        rexp.close()
-                        import traceback
-                        traceback.print_exception(e)
-                        raise
-            if peak_offset is None:
-                yield None,None #waitForSymbolがStopIntertionを出したときは終端到達。
-            else:
-                while True:
-                    try:
-                        # print(">>",peak_offset+stream.pos)
-                        stream.seek(tone_ticks+peak_offset) #同期シンボル末尾に移動
-                        # print(">>",stream.pos)
-                        break
-                    except RecoverableStopIteration as e:
-                        yield e,None
-                        continue
-                    except StopIteration as e:
-                        # print("KILLED2")
-                        yield None,None #waitForSymbolがStopIntertionを出したときは終端到達。
-                        return
+        self._asmethod:self.AsyncDemodulateX=None
 
-                tbd=TraitBlockDecoder(tone_ticks)
-                if filter is None:
-                    yield None,tbd.setInput(stream)
-                else:
-                    yield None,filter.setInput(tbd.setInput(stream))
-        finally:
-            self._recover_lock=self._recover_lock-1
+
 
     def demodulateAsBit(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[int]:
         """ TBSK信号からビットを復元します。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
         """
-        g:Generator=self._common_gen(src,None)
-        e,r=next(g)
-        if e is None:
-            g.close()
-            return r
-        elif isinstance(e,RecoverableStopIteration):
-            raise GeneratorRecoverException(g)
-        elif isinstance(e,StopIteration):
-            g.close()
+        assert(self._asmethod is None)
+        asmethod=self.AsyncDemodulateX(self,src,None)
+        if asmethod.run():
+            return asmethod.result
         else:
-            raise RuntimeError(e)
+            self._asmethod=asmethod #解放はAsyncDemodulateXのcloseで
+            raise AsyncMethodRecoverException(asmethod) 
 
     def demodulateAsInt(self,src:Union[Iterator[float],Iterator[float]],bitwidth:int=8)->IRecoverableIterator[int]:
         """ TBSK信号からnビットのint値配列を復元します。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
         """
-        g:Generator=self._common_gen(src,BitsWidthFilter(1,bitwidth))
-        e,r=next(g)
-        if e is None:
-            g.close()
-            return r
-        elif isinstance(e,RecoverableStopIteration):
-            raise GeneratorRecoverException(g)
-        elif isinstance(e,StopIteration):
-            g.close()
+        assert(self._asmethod is None)
+        asmethod=self.AsyncDemodulateX(self,src,BitsWidthFilter(1,bitwidth))
+        if asmethod.run():
+            return asmethod.result
         else:
-            raise RuntimeError(e)
-
-    
-
+            self._asmethod=asmethod #解放はAsyncDemodulateXのcloseで
+            raise AsyncMethodRecoverException(asmethod) 
 
     def demodulateAsBytes(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[bytes]:
         """ TBSK信号からバイト単位でbytesを返します。
             途中でストリームが終端した場合、既に読みだしたビットは破棄されます。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。   
         """
-        g:Generator=self._common_gen(src,Bits2BytesFilter(input_bits=1))
-        e,r=next(g)
-        if e is None:
-            g.close()
-            return r
-        elif isinstance(e,RecoverableStopIteration):
-            raise GeneratorRecoverException(g)
-        elif isinstance(e,StopIteration):
-            g.close()
+        assert(self._asmethod is None)
+        asmethod=self.AsyncDemodulateX(self,src,Bits2BytesFilter(input_bits=1))
+        if asmethod.run():
+            return asmethod.result
         else:
-            raise RuntimeError(e)
-
+            self._asmethod=asmethod #解放はAsyncDemodulateXのcloseで
+            raise AsyncMethodRecoverException(asmethod) 
 
     def demodulateAsStr(self,src:Union[Iterator[float],Iterator[float]],encoding:str="utf-8")->IRecoverableIterator[str]:
         """ TBSK信号からsize文字単位でstrを返します。
             途中でストリームが終端した場合、既に読みだしたビットは破棄されます。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
         """
-        g:Generator=self._common_gen(src,Bits2StrFilter(input_bits=1,encoding=encoding))        
-        e,r=next(g)
-        if e is None:
-            g.close()
-            return r
-        elif isinstance(e,RecoverableStopIteration):
-            raise GeneratorRecoverException(g)
-        elif isinstance(e,StopIteration):
-            g.close()
+        assert(self._asmethod is None)
+        asmethod=self.AsyncDemodulateX(self,src,Bits2StrFilter(input_bits=1,encoding=encoding))
+        if asmethod.run():
+            return asmethod.result
         else:
-            raise RuntimeError(e)
+            self._asmethod=asmethod #解放はAsyncDemodulateXのcloseで
+            raise AsyncMethodRecoverException(asmethod) 
+
 
     def demodulateAsHexStr(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[str]:
-        g:Generator=self._common_gen(src,Bits2HexStrFilter())        
-        e,r=next(g)
-        if e is None:
-            g.close()
-            return r
-        elif isinstance(e,RecoverableStopIteration):
-            raise GeneratorRecoverException(g)
-        elif isinstance(e,StopIteration):
-            g.close()
+        assert(self._asmethod is None)
+        asmethod=self.AsyncDemodulateX(self,src,Bits2HexStrFilter())
+        if asmethod.run():
+            return asmethod.result
         else:
-            raise RuntimeError(e)
+            self._asmethod=asmethod #解放はAsyncDemodulateXのcloseで
+            raise AsyncMethodRecoverException(asmethod) 
+
