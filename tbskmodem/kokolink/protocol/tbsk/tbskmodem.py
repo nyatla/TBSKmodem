@@ -168,8 +168,9 @@ class TbskDemodulator:
             super().close()
             self._parent._asmethod=None
         def run(self)->bool:
+            # print("run",self._co_step)
             if self._closed:
-                return True            
+                return True
             if self._co_step==0:
                 try:
                     self._peak_offset=self._parent._pa_detector.waitForSymbol(self._stream) #現在地から同期ポイントまでの相対位置
@@ -191,10 +192,11 @@ class TbskDemodulator:
                     self._result=None
                     self.close()
                     return True
+                # print(self._peak_offset)
                 self._co_step=3
             if self._co_step==3:
                 try:
-                    # print(">>",peak_offset+stream.pos)
+                    # print(">>",self._peak_offset+self._stream.pos)
                     self._stream.seek(self._tone_ticks+self._peak_offset) #同期シンボル末尾に移動
                     # print(">>",stream.pos)
                     tbd=TraitBlockDecoder(self._tone_ticks)

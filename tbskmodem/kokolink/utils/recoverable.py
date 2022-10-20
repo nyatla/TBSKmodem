@@ -50,11 +50,12 @@ class AsyncMethodRecoverException(RecoverableException[ASMETHOD]):
         assert(self._asmethod is not None)
         try:
             if self._asmethod.run():
+                # print("aaaa",self._asmethod.result)
                 return self._asmethod.result
-        except:
+        except Exception as e:
             #runが例外を発生したときは内部closeに期待する。
             raise
-        raise self
+        raise AsyncMethodRecoverException(self._asmethod)
     def close(self):
         try:
             self._asmethod.close()

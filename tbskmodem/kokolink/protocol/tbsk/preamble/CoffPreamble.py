@@ -66,6 +66,7 @@ class CoffPreamble(Preamble):
             self._parent._asmethtod=None
             super().close()
         def run(self)->bool:
+            # print("wait",self._co_step)
             if self._closed:
                 return True
             #ローカル変数の生成
@@ -118,10 +119,10 @@ class CoffPreamble(Preamble):
                             continue
                         # print(3,nor,rb.tail,rb.top,self._gap)
                         # print(2,nor,self._gap)
+                        self._pmax=rb.tail
                         self._co_step=3
                     if self._co_step==3:
                         #同期シンボルピーク検出
-                        self._pmax=rb.tail
                         while True:
                             try:
                                 n=next(avi)
@@ -174,11 +175,11 @@ class CoffPreamble(Preamble):
                         # print(peak_pos)
                         self._result=CoffPreamble.waitForSymbolResultAsInt(peak_pos-self._nor)#現在値からの相対位置
                         self.close()
-                        print(self._nor)
+                        return True
                     raise RuntimeError("Invalid co_step")
             except StopIteration as e:
                 self.close()
-                self.result=None
+                self._result=None
                 return True
                 # print("END")
             except:
