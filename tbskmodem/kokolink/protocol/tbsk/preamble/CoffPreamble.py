@@ -22,8 +22,7 @@ class CoffPreamble(Preamble):
         self._threshold=threshold
         self._symbol=tone
         self._cycle=cycle #平坦部分のTick数
-        self._recover_lock=0
-        self._asmethtod:self.ASwaitForSymbol=None
+        self._asmethtod_lock:bool=False
     def getPreamble(self)->IRoStream[float]:
         enc=TraitBlockEncoder(self._symbol)
         b=[1]*self._cycle
@@ -58,17 +57,18 @@ class CoffPreamble(Preamble):
             self._pmax:float
             self._co_step=0
             self._result=None
+            self._closed=False
         @property
         def result(self)->Union["CoffPreamble.waitForSymbolResultAsInt",NoneType]:
-            assert(self._closed)
+            assert(self._co_step>=4)
             return self._result           
         def close(self):
-            self._parent._asmethtod=None
-            super().close()
+            if not self._closed:
+                self._parent._asmethtod_lock=False
+                self._closed=True
         def run(self)->bool:
+            assert(not self._closed)
             # print("wait",self._co_step)
-            if self._closed:
-                return True
             #ローカル変数の生成
             avi=self._avi
             cof=self._cof
@@ -113,7 +113,6 @@ class CoffPreamble(Preamble):
                             except RecoverableStopIteration as e:
                                 return False
                         # print(2,nor,rb.tail,rb.top,self._gap)
-                        # continue
                         if self._gap<self._parent._threshold:
                             self._co_step=0 #コルーチンをリセット
                             continue
@@ -134,7 +133,7 @@ class CoffPreamble(Preamble):
                                     break
                             except RecoverableStopIteration as e:
                                 return False
-                        self._co_step=4
+                        self._co_step=4 #END
                         symbol_ticks=self._symbol_ticks
                         sample_width=self._sample_width
                         cofbuf_len=self._cofbuf_len
@@ -178,11 +177,13 @@ class CoffPreamble(Preamble):
                         return True
                     raise RuntimeError("Invalid co_step")
             except StopIteration as e:
+                self._co_step=4 #END
                 self.close()
                 self._result=None
                 return True
                 # print("END")
             except:
+                self._co_step=4 #END
                 self.close()
                 raise
 
@@ -195,13 +196,13 @@ class CoffPreamble(Preamble):
                 終端に到達した場合は、Noneを返します。
         """
 
-        assert(self._asmethtod is None)
+        assert(self._asmethtod_lock==False)
         asmethtod=self.ASwaitForSymbol(self,src)
         if asmethtod.run():
             return asmethtod.result
         else:
             #ロックする（解放はASwaitForSymbolのclose内で。）
-            self._asmethtod=asmethtod
+            self._asmethtod_lock=True
             raise AsyncMethodRecoverException(asmethtod)
 
 

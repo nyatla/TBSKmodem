@@ -1,5 +1,6 @@
+from asyncio.constants import DEBUG_STACK_DEPTH
 from itertools import chain
-from typing import overload,Union
+from typing import Callable, overload,Union,Generic,TypeVar
 
 
 from ...types import NoneType, Iterable, Iterator,Generator,Tuple
@@ -150,30 +151,40 @@ class TbskModulator:
             
 
 
-
-
+DSTTYPE=TypeVar("DSTTYPE")
 class TbskDemodulator:
-    class AsyncDemodulateX(AsyncMethod[IRoStream[any]]):
-        def __init__(self,parent:"TbskDemodulator",src:Union[IRoStream[int],Iterable[int],Iterator[int]],filter:IFilter[IRoStream[int],any]):
+    class AsyncDemodulate(AsyncMethod[IRecoverableIterator[DSTTYPE]],Generic[DSTTYPE]):
+        def __init__(self,parent:"TbskDemodulator",src:Union[IRoStream[float],Iterable[float],Iterator[float]],builder:Callable[[TraitBlockDecoder],IRecoverableIterator[DSTTYPE]]):
             super().__init__()
             self._tone_ticks=len(parent._tone)
-            self._result=None
-            self._filter=filter
+            self._result:IRecoverableIterator[DSTTYPE]=None
             self._stream=src if isinstance(src,IRoStream) else RoStream(src)
             self._peak_offset:int=None
             self._parent=parent
             self._wsrex:AsyncMethodRecoverException=None
             self._co_step=0
+            self._builder:Callable[[TraitBlockDecoder],IRecoverableIterator[DSTTYPE]]=builder
+            self._closed=False
+        @property
+        def result(self)->IRecoverableIterator[DSTTYPE]:
+            assert(self._co_step>=4)
+            return self._result            
         def close(self):
-            super().close()
-            self._parent._asmethod=None
+            if not self._closed:
+                try:
+                    if self._wsrex is not None:
+                        self._wsrex.close()
+                finally:
+                    self._wsrex=None
+                    self._parent._asmethod_lock=False
+                    self._closed=True
         def run(self)->bool:
+            assert(not self._closed)
             # print("run",self._co_step)
-            if self._closed:
-                return True
             if self._co_step==0:
                 try:
                     self._peak_offset=self._parent._pa_detector.waitForSymbol(self._stream) #現在地から同期ポイントまでの相対位置
+                    assert(self._wsrex is None)
                     self._co_step=2
                 except AsyncMethodRecoverException as rexp:
                     self._wsrex=rexp
@@ -190,6 +201,7 @@ class TbskDemodulator:
             if self._co_step==2:
                 if self._peak_offset is None:
                     self._result=None
+                    self._co_step=4
                     self.close()
                     return True
                 # print(self._peak_offset)
@@ -200,10 +212,7 @@ class TbskDemodulator:
                     self._stream.seek(self._tone_ticks+self._peak_offset) #同期シンボル末尾に移動
                     # print(">>",stream.pos)
                     tbd=TraitBlockDecoder(self._tone_ticks)
-                    if self._filter is None:
-                        self._result=tbd.setInput(self._stream)
-                    else:
-                        self._result=self._filter.setInput(tbd.setInput(self._stream))
+                    self._result=self._builder(tbd.setInput(self._stream))
                     self.close()
                     self._co_step=4
                     return True
@@ -215,54 +224,48 @@ class TbskDemodulator:
                     self._co_step=4
                     return True
             raise RuntimeError()
-        @property
-        def result(self)->IRoStream[any]:
-            assert(self._closed)
-            return self._result
+
 
 
     def __init__(self,tone:TraitTone,preamble:Preamble=None):
         self._tone=tone
         self._pa_detector=preamble if preamble is not None else CoffPreamble(tone,threshold=1.0)
-        self._asmethod:self.AsyncDemodulateX=None
-
-
+        self._asmethod_lock:bool=False
 
     def demodulateAsBit(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[int]:
         """ TBSK信号からビットを復元します。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
         """
-        assert(self._asmethod is None)
-        asmethod=self.AsyncDemodulateX(self,src,None)
+        assert(self._asmethod_lock==False)
+        asmethod=self.AsyncDemodulate[int](self,src,lambda s:s)
         if asmethod.run():
             return asmethod.result
         else:
-            self._asmethod=asmethod #解放はAsyncDemodulateXのcloseで
+            self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
             raise AsyncMethodRecoverException(asmethod) 
-
+    
     def demodulateAsInt(self,src:Union[Iterator[float],Iterator[float]],bitwidth:int=8)->IRecoverableIterator[int]:
         """ TBSK信号からnビットのint値配列を復元します。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
         """
-        assert(self._asmethod is None)
-        asmethod=self.AsyncDemodulateX(self,src,BitsWidthFilter(1,bitwidth))
+        assert(self._asmethod_lock==False)
+        asmethod=self.AsyncDemodulate[int](self,src,lambda s:BitsWidthFilter(input_bits=0,output_bits=bitwidth).setInput(s))
         if asmethod.run():
             return asmethod.result
         else:
-            self._asmethod=asmethod #解放はAsyncDemodulateXのcloseで
+            self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
             raise AsyncMethodRecoverException(asmethod) 
 
     def demodulateAsBytes(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[bytes]:
-        """ TBSK信号からバイト単位でbytesを返します。
-            途中でストリームが終端した場合、既に読みだしたビットは破棄されます。
-            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。   
+        """ TBSK信号からnビットのint値配列を復元します。
+            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
         """
-        assert(self._asmethod is None)
-        asmethod=self.AsyncDemodulateX(self,src,Bits2BytesFilter(input_bits=1))
+        assert(self._asmethod_lock==False)
+        asmethod=self.AsyncDemodulate[int](self,src,lambda s:Bits2BytesFilter(input_bits=1).setInput(s))
         if asmethod.run():
             return asmethod.result
         else:
-            self._asmethod=asmethod #解放はAsyncDemodulateXのcloseで
+            self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
             raise AsyncMethodRecoverException(asmethod) 
 
     def demodulateAsStr(self,src:Union[Iterator[float],Iterator[float]],encoding:str="utf-8")->IRecoverableIterator[str]:
@@ -270,21 +273,20 @@ class TbskDemodulator:
             途中でストリームが終端した場合、既に読みだしたビットは破棄されます。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
         """
-        assert(self._asmethod is None)
-        asmethod=self.AsyncDemodulateX(self,src,Bits2StrFilter(input_bits=1,encoding=encoding))
+        assert(self._asmethod_lock==False)
+        asmethod=self.AsyncDemodulate[str](self,src,lambda s:Bits2StrFilter(encoding=encoding).setInput(s))
         if asmethod.run():
             return asmethod.result
         else:
-            self._asmethod=asmethod #解放はAsyncDemodulateXのcloseで
+            self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
             raise AsyncMethodRecoverException(asmethod) 
 
-
     def demodulateAsHexStr(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[str]:
-        assert(self._asmethod is None)
-        asmethod=self.AsyncDemodulateX(self,src,Bits2HexStrFilter())
+        assert(self._asmethod_lock==False)
+        asmethod=self.AsyncDemodulate[str](self,src,lambda s:Bits2HexStrFilter().setInput(s))
         if asmethod.run():
             return asmethod.result
         else:
-            self._asmethod=asmethod #解放はAsyncDemodulateXのcloseで
+            self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
             raise AsyncMethodRecoverException(asmethod) 
 
