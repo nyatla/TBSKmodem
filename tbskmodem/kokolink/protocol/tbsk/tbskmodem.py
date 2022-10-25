@@ -249,7 +249,7 @@ class TbskDemodulator:
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
         """
         assert(self._asmethod_lock==False)
-        asmethod=self.AsyncDemodulate[int](self,src,lambda s:BitsWidthFilter(input_bits=0,output_bits=bitwidth).setInput(s))
+        asmethod=self.AsyncDemodulate[int](self,src,lambda s:BitsWidthFilter(input_bits=1,output_bits=bitwidth).setInput(s))
         if asmethod.run():
             return asmethod.result
         else:

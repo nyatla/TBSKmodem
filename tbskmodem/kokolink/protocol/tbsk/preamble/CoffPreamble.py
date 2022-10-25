@@ -28,7 +28,7 @@ class CoffPreamble(Preamble):
         b=[1]*self._cycle
         c=[i%2 for i in range(self._cycle)]
         d=[(1+c[-1])%2,(1+c[-1])%2,c[-1],]
-        return enc.setInput(BitStream([0,1]+b+[1]+c+d,1))
+        return enc.setInput(BitStream([0,1]+b+[1]+c+d,bitwidth=1))
         # return enc.setInput(BitStream([0,1]+[1,1]+[1]+[0,1]+[0,0,1],1))
         # return enc.setInput(BitStream([0,1,1,1,1,0,1,0,0,1],1))
 
