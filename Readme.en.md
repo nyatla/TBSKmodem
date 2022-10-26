@@ -1,6 +1,6 @@
 # TBSK modem
 
-Japanese documente 👉[Readme.md](Readme.md)
+Japanese document 👉[Readme.md](Readme.md)
 
 TBSK (Trait Block Shift Keying) modem is a low-speed, short-range audio communication implementation without FFT/IFTT.
 
@@ -81,7 +81,9 @@ It is not supervised by experts, so check the details yourself.
 The explanation assumes the Anaconda environment.
 Python 3.10.x is recommended.
 
-### Setup
+The command line tool [tbskmodem](./tbskmodem.md) will be installed at the same time.
+
+#### Setup for Anaconda
 Clone the sorce code from github.
 
 ```
@@ -96,8 +98,14 @@ It is required for sound playback and capture.
 >conda install -c anaconda numpy
 >conda install -c conda-forge python-sounddevice
 ```
+#### Setup by pip
 
+```
+$pip install tbskmodem
+$sudo apt-get install portaudio19-dev
+```
 
+TBSKmodem requires portaudio library.
 
 ### Location of sample scripts
 

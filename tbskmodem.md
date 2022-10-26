@@ -15,6 +15,18 @@ $ cd TBSKmodem
 $ pip install .
 ```
 
+依存ライブラリがうまくセットアップできない場合は、次のコマンドを試してください。
+
+依存ライブラリのセットアップ
+```
+$ pip install tdqm python-sounddevice
+```
+サウンドドライバのセットアップ
+
+```
+$sudo apt-get install portaudio19-dev
+```
+
 
 ソースコードは、[tbskmodem_apps/_tbskmodem.py](https://github.com/nyatla/TBSKmodem/blob/master/tbskmodem_apps/_tbskmodem.py)です。
 
