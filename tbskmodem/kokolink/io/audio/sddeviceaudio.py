@@ -167,7 +167,7 @@ class SoundDeviceInputIterator(IAudioInputInterator):
     キューイングはstart,または__enter__で開始され、stopで停止します。stopしたイテレータはcloseしない限りstartで再開できます。再開すると、その時点でのキューの内容は破棄されます。
     close,__exit__によりストリームを閉じます。
     """
-    def __init__(self,framerate:int=8000,device_id:Union[int,str]=0,bits_par_sample:int=16):
+    def __init__(self,framerate:int=8000,bits_par_sample:int=16,device_id:Union[int,str]=0):
         """
         Args:
             frames_per_buffer pyaudioから受け取るフレームのサイズです。framerateの1/nで1秒間当たりの更新回数になります。
