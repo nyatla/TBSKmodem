@@ -18,6 +18,9 @@ except ModuleNotFoundError:
 
 lprint=print
 
+TEXT_RESOURCR={
+    "Argument_tone_help":'Trait tone format."xpsk:int,int(,int)" | "sin:int,int | "pcm:str"',
+}
 
 # parser
 
@@ -113,11 +116,11 @@ class Modulate(BaseCommand):
         parser_add.add_argument('out',type=str,help='Output wave file name.')
         parser_add.add_argument('--carrier',type=int,default=16000,help='Carrier frequency.')
         parser_add.add_argument('--sample_bits',type=int,choices=[8,16],default=16,help='Sampling bit width.')
-        parser_add.add_argument('--tone',type=str,default="xpsk:10,10",help='Trait tone format."xpsk:int,int(,int)" | "sin:int,int"')
+        parser_add.add_argument('--tone',type=str,default="xpsk:10,10",help=TEXT_RESOURCR["Argument_tone_help"])
         parser_add.add_argument('--silence',type=float,default=0.5,help='Silence padding time in sec')
-        parser_add.add_argument('--text',type=str,nargs="?" ,default=None,const="",help='Text format input.')
-        parser_add.add_argument('--hex',type=str,nargs="?" ,default=None,const="",help='Hex text format input.')
-        parser_add.add_argument('--file',type=str,default=None,help='File input')
+        parser_add.add_argument('--text',type=str,nargs="?" ,default=None,help='Text format input.')
+        parser_add.add_argument('--hex',type=str,nargs="?" ,default=None,help='Hex text format input.')
+        parser_add.add_argument('--file',type=str,nargs="?" ,default=None,help='File input')
         parser_add.set_defaults(handler=self)
         super().__init__(parser_add)
 
@@ -180,9 +183,9 @@ class Demodulate(BaseCommand):
         "    Demodulate yakitori.wav and save to umai.txt.\n",
         help='see `$tbskmodem dem -h`')
         parser_add.add_argument('src',type=str,help='Input wave file name.')
-        parser_add.add_argument('--text',action='store_true',help='Show in text.')
-        parser_add.add_argument('--hex',action='store_true',help='Show in hex string.')
-        parser_add.add_argument('--file',default=False,help='Save to file as is.')
+        parser_add.add_argument('--text',default=None,action='store_const',const=True,help='Show in text.')
+        parser_add.add_argument('--hex',default=None,action='store_const',const=True,help='Show in hex string.')
+        parser_add.add_argument('--file',default=None,nargs="?",help='Save to file as is.')
         parser_add.add_argument('--tone',default=None,help='Tone format or ticks.')
         parser_add.add_argument('--noinfo',action='store_true',help='Hide details other than results.')
         parser_add.set_defaults(handler=self)
@@ -204,7 +207,7 @@ class Demodulate(BaseCommand):
         src=iter(pcm.dataAsFloat())
 
 
-        numoffmt=3-[args.text,args.hex,args.file].count(False)
+        numoffmt=3-[args.text,args.hex,args.file].count(None)
         if numoffmt>1:
             raise RuntimeError("Must be set text,hex,file parameter in exclusive.")
         lprint("Start Demodulation.")
@@ -281,12 +284,12 @@ class Tx(BaseCommand):
         parser_add.add_argument('--carrier',type=int,default=16000,help='Carrier frequency.')
         parser_add.add_argument('--sample_bits',type=int,choices=[8,16],default=16,help='Sampling bit width.')
         parser_add.add_argument('--device',type=int,default=None,help='Audio device id')
-        parser_add.add_argument('--tone',type=str,default="xpsk:10,10",help='Trait tone format."xpsk:int,int(,int)" | "sin:int,int"')
+        parser_add.add_argument('--tone',type=str,default="xpsk:10,10",help=TEXT_RESOURCR["Argument_tone_help"])
         parser_add.add_argument('--silence',type=float,default=0.5,help='Silence padding time in sec')
         parser_add.add_argument('--volume',type=float,default="1.0",help='Volume multiplyer 0 to 1.0')
         parser_add.add_argument('--text',type=str,nargs="?" ,default=None,const="",help='Text format input.')
         parser_add.add_argument('--hex',type=str,nargs="?" ,default=None,const="",help='Hex string format input.')
-        parser_add.add_argument('--file',type=str,default=None,help='File input')
+        parser_add.add_argument('--file',type=str,nargs="?",default=None,help='File input')
         parser_add.set_defaults(handler=self)
         super().__init__(parser_add)
 
@@ -361,9 +364,10 @@ class Rx(BaseCommand):
         parser_add.add_argument('--carrier',type=int,default=16000,help='Carrier frequency.')
         parser_add.add_argument('--sample_bits',type=int,choices=[8,16],default=16,help='Sampling bit width.')
         parser_add.add_argument('--device',type=int,default=None,help='Audio device id')
-        parser_add.add_argument('--text',action='store_true',help='Show in text.')
-        parser_add.add_argument('--hex',action='store_true',help='Show in hex string.')
-        parser_add.add_argument('--file',default=False,help='Save to file as is.')
+        parser_add.add_argument('--text',default=None,action='store_const',const=True,help='Show in text.')
+        parser_add.add_argument('--hex',default=None,action='store_const',const=True,help='Show in hex string.')
+        parser_add.add_argument('--file',default=None,nargs=1,help='Save to file as is.')
+        parser_add.add_argument('--rpc',default=None,nargs=2,help='Connect to specified type rpc client by url. get|post url')
         parser_add.add_argument('--tone',default=None,help='Tone format or ticks.')
         parser_add.add_argument('--noinfo',action='store_true',help='Hide details other than results.')
         parser_add.add_argument('--norepeat',action='store_true',help='Do not repeat signal detection.')
@@ -386,9 +390,10 @@ class Rx(BaseCommand):
         lprint()
         lprint("Listening...")
 
-        with SoundDeviceInputIterator(args.carrier,device_id=args.device,bits_par_sample=args.sample_bits) as isrc:
+        with SoundDeviceInputIterator(args.carrier,bits_par_sample=args.sample_bits,device_id=args.device) as isrc:
 
-            numoffmt=3-[args.text,args.hex,args.file].count(False)
+            flags=[args.text,args.hex,args.file,args.rpc]
+            numoffmt=len(flags)-flags.count(None)
             if numoffmt>1:
                 raise RuntimeError("Must be set text,hex,file parameter in exclusive.")
             if numoffmt==0 or args.text==True:
@@ -423,27 +428,41 @@ class Rx(BaseCommand):
                     if args.norepeat:
                         break
                 lprint("End of stream.")
-            elif args.file!=False:
+            elif args.file is not None:
                 d=b""
-                while True:
-                    c=0                
-                    n=demod.demodulateAsBytes(isrc)
-                    if n is None:
-                        break
-                    lprint("Preamble found.")
-                    for i in n:
-                        c=c+1
-                        d=d+i
-                        print(".",end="",flush=True)
-                    print()
-                    lprint("Signal lost.")
-                    if args.norepeat:
-                        break
-                lprint("End of stream.")
-                if len(d)>0:
-                    with open(args.file,"wb") as fp:
-                        fp.write(d)
-                    lprint("File saved:%s"%(args.file))
+                try:
+                    while True:
+                        c=0                
+                        n=demod.demodulateAsBytes(isrc)
+                        if n is None:
+                            break
+                        lprint("Preamble found.")
+                        for i in n:
+                            c=c+1
+                            d=d+i
+                            print(".",end="",flush=True)
+                        print()
+                        lprint("Signal lost.")
+                        if args.norepeat:
+                            break
+                        d=d+"\n"
+                    lprint("End of stream.")
+                finally:
+                    if len(d)>0:
+                        with open(args.file[0],"wb") as fp:
+                            fp.write(d)
+                        lprint("File saved:%s"%(args.file[0]))
+            elif args.rpc!=False:
+                lprint("Not Implements.")
+                # #https://developer.bitcoin.org/reference/rpc/sendrawtransaction.html
+                
+                # class RpcClient():
+                #     def sendRawTransaction(data:bytes):
+                # # https://ethereum.org/ja/developers/docs/apis/json-rpc/
+
+                # # btc:sendRawTransaction:
+                # # eth:///
+                # ...
             else:
                 raise RuntimeError()
             return

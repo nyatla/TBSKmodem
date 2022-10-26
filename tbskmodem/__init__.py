@@ -6,11 +6,12 @@ from .kokolink.io.audio.sddeviceaudio import SoundDeviceInputIterator,SoundDevic
 # from .kokolink.io.audio.pyaudioio import PyAudioInputIterator
 from .kokolink.utils.wavefile import PcmData
 from .kokolink.utils.wavefile.riffio import Chunk,InfoItemChunk,InfoListChunk,RawChunk
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __all__ = [
     TbskModulator,TbskDemodulator,
     CoffPreamble,Preamble,
     TraitTone,MSeqTone,SinTone,PnTone,XPskSinTone,
     MSequence,
     SoundDeviceInputIterator,SoundDeviceAudioPlayer,
+    Chunk,InfoItemChunk,InfoListChunk,RawChunk,
     PcmData]
