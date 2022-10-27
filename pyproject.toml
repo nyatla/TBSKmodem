@@ -10,10 +10,10 @@ classifiers = ["Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-version = "0.1.0"
+version = "0.1.1"
 
 [tool.setuptools]
-packages = ["tbskmodem","tbskmodem_apps"]
+packages = ["tbskmodem"]
 
 
 [tool.poetry.dependencies]
@@ -26,4 +26,4 @@ dependencies = [
 
 
 [project.scripts]
-"tbskmodem" = "tbskmodem_apps._tbskmodem:main"
+"tbskmodem" = "tbskmodem.__main__:main"

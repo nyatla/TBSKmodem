@@ -28,7 +28,7 @@ $sudo apt-get install portaudio19-dev
 ```
 
 
-ソースコードは、[tbskmodem_apps/_tbskmodem.py](https://github.com/nyatla/TBSKmodem/blob/master/tbskmodem_apps/_tbskmodem.py)です。
+ソースコードは、[tbskmodem/__main__.py](https://github.com/nyatla/TBSKmodem/blob/master/__main__.py)です。
 
 
 ## 機能
