@@ -47,7 +47,7 @@ class MSeqTone(TraitTone):
     def __init__(self,*args,**kwds):
         self._sequence:Tuple(int)
         def __init__A(bits:int,tap:int,base_tone:TraitTone=None):
-            ms=MSequence(bits,tap).getOneCycle()
+            ms=MSequence(bits,tap).genOneCycle()
             tone=base_tone if base_tone is not None else SinTone(20,1)
             self._sequence=tuple(ms)
             a=sum([[j*(i*2-1) for j in tone] for i in ms],[]) #flatten

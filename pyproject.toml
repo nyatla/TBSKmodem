@@ -10,7 +10,7 @@ classifiers = ["Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-version = "0.1.1"
+version = "0.1.2"
 
 [project.urls]
 homepage = "https://github.com/nyatla/TBSKmodem/"

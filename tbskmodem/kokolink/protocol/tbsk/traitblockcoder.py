@@ -5,43 +5,17 @@ from ...streams.rostreams import BasicRoStream
 from ...interfaces import IDecoder, IEncoder,IBitStream,IRoStream
 from ...utils.functions import isinstances
 from ...utils.math.corrcoef import SelfCorrcoefIterator
-from ...utils import SumIterator
+from ...utils import AverageInterator
 from .toneblock import TraitTone
-from ...types import Deque, Iterator,Tuple
+from ...types import Deque, Tuple
 
 
 
 
 
 
-T=TypeVar("T")
 
 
-
-
-
-class AverageInterator(SumIterator[T]):
-    """ 末尾からticksまでの平均値を連続して返却します。
-        このイテレータはRecoverableStopInterationを利用できます。
-    """
-    @overload
-    def __init__(self,src:Iterator[T],ticks:int):
-        ...
-    def __init__(self,*args,**kwds):
-        self._length:int
-        def __init__B(self:AverageInterator,src:Iterator[T],ticks:int):
-            super().__init__(src,ticks)
-            self._length=ticks
-        if isinstances(args,(Iterator,int,)):
-            __init__B(self,*args,**kwds)
-        else:
-            raise TypeError()
-    def __next__(self) -> T:
-        try:
-            r=super().__next__()
-        except RecoverableStopIteration as e:
-            raise RecoverableStopIteration(e)
-        return r/self._length
 
 
 class TraitBlockEncoder(IEncoder[IBitStream,float],BasicRoStream[float]):
@@ -58,7 +32,7 @@ class TraitBlockEncoder(IEncoder[IBitStream,float],BasicRoStream[float]):
         self._btone:TraitTone
         # self._symbol_tone_size:int
         def __init__B(tone:TraitTone):
-            self._sblock=[-1] #-1,1にする
+            self._sblock=[-1] #-1,1にする @bug setInputでリセットされないけどいいの？
             self._btone=tone
             # self._symbol_tone_size=len(self._btone)*2
         if isinstances(args,(TraitTone,)):
@@ -69,6 +43,7 @@ class TraitBlockEncoder(IEncoder[IBitStream,float],BasicRoStream[float]):
         super().__init__()
     """
         Kビットは,N*K+1個のサンプルに展開されます。
+        恐らく不具合:ストリームを入れ替えた場合でも、_sblockがリセットされないので信号が中断される。現在は仕様。
     """
     def setInput(self,src:IBitStream)->"TraitBlockEncoder":
         if src is None:

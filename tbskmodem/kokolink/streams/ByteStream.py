@@ -1,14 +1,13 @@
 
 from typing import overload
 import struct
-from ..interfaces import IByteStream
 from ..utils.functions import isinstances
 from .bytestreams import BasicByteStream
 from ..types import Iterable,Iterator,List
 
 
 
-class ByteStream(BasicByteStream,IByteStream):
+class ByteStream(BasicByteStream):
     """ iterをラップするByteStreamストリームを生成します。
         bytesの場合は1バイトづつ返します。
         strの場合はbytesに変換してから1バイトづつ返します。

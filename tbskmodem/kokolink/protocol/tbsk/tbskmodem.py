@@ -4,15 +4,14 @@ from typing import Callable, overload,Union,Generic,TypeVar
 
 
 from ...types import NoneType, Iterable, Iterator,Generator,Tuple
-from ...utils.recoverable import AsyncMethodRecoverException, RecoverableException, RecoverableStopIteration
+from ...utils.recoverable import  RecoverableException, RecoverableStopIteration
 from ...utils import AsyncMethod
 from ...utils.functions import isinstances
 from ...interfaces import IBitStream, IFilter,IRoStream,IRecoverableIterator
 from ...filter import BitsWidthFilter,Bits2BytesFilter,Bits2StrFilter
 from ...streams import ByteStream
 from ...streams.rostreams import BasicRoStream
-from ...streams import BitStream
-from ...streams import RoStream
+from ...streams import BitStream,RoStream
 
 
 from .toneblock import TraitTone
@@ -161,7 +160,7 @@ class TbskDemodulator:
             self._stream=src if isinstance(src,IRoStream) else RoStream(src)
             self._peak_offset:int=None
             self._parent=parent
-            self._wsrex:AsyncMethodRecoverException=None
+            self._wsrex:AsyncMethod[IRecoverableIterator[DSTTYPE]]=None
             self._co_step=0
             self._builder:Callable[[TraitBlockDecoder],IRecoverableIterator[DSTTYPE]]=builder
             self._closed=False
@@ -186,18 +185,21 @@ class TbskDemodulator:
                     self._peak_offset=self._parent._pa_detector.waitForSymbol(self._stream) #現在地から同期ポイントまでの相対位置
                     assert(self._wsrex is None)
                     self._co_step=2
-                except AsyncMethodRecoverException as rexp:
-                    self._wsrex=rexp
+                except RecoverableException as rexp:
+                    self._wsrex=rexp.detach()
                     self._co_step=1
                     return False
+
+
+
             if self._co_step==1:
-                try:
-                    self._peak_offset=self._wsrex.recover()
-                    self._wsrex=None
-                    self._co_step=2
-                except AsyncMethodRecoverException as rexp:
-                    self._wsrex=rexp
+                if self._wsrex.run()== False:
                     return False
+                else:
+                    self._peak_offset = self._wsrex.result
+                    self._wsrex = None
+                    self._co_step = 2
+
             if self._co_step==2:
                 if self._peak_offset is None:
                     self._result=None
@@ -206,6 +208,7 @@ class TbskDemodulator:
                     return True
                 # print(self._peak_offset)
                 self._co_step=3
+
             if self._co_step==3:
                 try:
                     # print(">>",self._peak_offset+self._stream.pos)
@@ -235,6 +238,7 @@ class TbskDemodulator:
     def demodulateAsBit(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[int]:
         """ TBSK信号からビットを復元します。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
+            RecoverExceptionが搬送するクラスは、AsyncDemodulate[AsyncMethod[IRecoverableIterator[int]]です。
         """
         assert(self._asmethod_lock==False)
         asmethod=self.AsyncDemodulate[int](self,src,lambda s:s)
@@ -242,11 +246,12 @@ class TbskDemodulator:
             return asmethod.result
         else:
             self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
-            raise AsyncMethodRecoverException(asmethod) 
+            raise RecoverableException(asmethod) 
     
     def demodulateAsInt(self,src:Union[Iterator[float],Iterator[float]],bitwidth:int=8)->IRecoverableIterator[int]:
         """ TBSK信号からnビットのint値配列を復元します。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
+            RecoverExceptionが搬送するクラスは、AsyncDemodulate[AsyncMethod[IRecoverableIterator[int]]です。
         """
         assert(self._asmethod_lock==False)
         asmethod=self.AsyncDemodulate[int](self,src,lambda s:BitsWidthFilter(input_bits=1,output_bits=bitwidth).setInput(s))
@@ -254,11 +259,12 @@ class TbskDemodulator:
             return asmethod.result
         else:
             self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
-            raise AsyncMethodRecoverException(asmethod) 
+            raise RecoverableException(asmethod) 
 
     def demodulateAsBytes(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[bytes]:
         """ TBSK信号からnビットのint値配列を復元します。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
+            RecoverExceptionが搬送するクラスは、AsyncDemodulate[AsyncMethod[IRecoverableIterator[int]]です。
         """
         assert(self._asmethod_lock==False)
         asmethod=self.AsyncDemodulate[int](self,src,lambda s:Bits2BytesFilter(input_bits=1).setInput(s))
@@ -266,12 +272,13 @@ class TbskDemodulator:
             return asmethod.result
         else:
             self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
-            raise AsyncMethodRecoverException(asmethod) 
+            raise RecoverableException(asmethod) 
 
     def demodulateAsStr(self,src:Union[Iterator[float],Iterator[float]],encoding:str="utf-8")->IRecoverableIterator[str]:
         """ TBSK信号からsize文字単位でstrを返します。
             途中でストリームが終端した場合、既に読みだしたビットは破棄されます。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
+            RecoverExceptionが搬送するクラスは、AsyncDemodulate[AsyncMethod[IRecoverableIterator[str]]です。
         """
         assert(self._asmethod_lock==False)
         asmethod=self.AsyncDemodulate[str](self,src,lambda s:Bits2StrFilter(encoding=encoding).setInput(s))
@@ -279,14 +286,16 @@ class TbskDemodulator:
             return asmethod.result
         else:
             self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
-            raise AsyncMethodRecoverException(asmethod) 
-
+            raise RecoverableException(asmethod) 
     def demodulateAsHexStr(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[str]:
+        """
+            RecoverExceptionが搬送するクラスは、AsyncDemodulate[AsyncMethod[IRecoverableIterator[str]]です。
+        """
         assert(self._asmethod_lock==False)
         asmethod=self.AsyncDemodulate[str](self,src,lambda s:Bits2HexStrFilter().setInput(s))
         if asmethod.run():
             return asmethod.result
         else:
             self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
-            raise AsyncMethodRecoverException(asmethod) 
+            raise RecoverableException(asmethod) 
 

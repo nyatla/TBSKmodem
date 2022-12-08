@@ -1,7 +1,6 @@
-from doctest import DebugRunner
-from typing import Generic,TypeVar,Union,Callable
+from typing import Generic,TypeVar
 from ..interfaces import IRecoverableIterator
-from ..types import NoneType,Generator, Iterator,Tuple
+from ..types import Iterator
 from .AsyncMethod import AsyncMethod
 T=TypeVar("T")
 
@@ -20,51 +19,20 @@ class RecoverableException(Exception,Generic[T]):
 
         再実行しない場合は、例外ハンドラでclose関数で再試行セッションを閉じてください。
     """
-    def __init__(self):
-        ...
-    
-    def recover(self)->T:
-        """ 関数を再試行します。再試行可能な状態で失敗した場合は、自分自信を返します。
-        """
-        ...
+    def __init__(self,recoverable_instance:AsyncMethod[T]):
+        self._recoverable_instance=recoverable_instance
+    def detach(self)->T:
+        if self._recover_instance is None:
+            raise RuntimeError()
+        r = self._recover_instance
+        self._recover_instance = None
+        return r
     def close(self):
-        ...
+        if self._recover_instance is not None:
+            self._recover_instance.close()
 
-# ASMETHOD=TypeVar("ASMETHOD",bound=AsyncMethod)
-class AsyncMethodRecoverException(RecoverableException[AsyncMethod[T]],Generic[T]):
-    """ AsyncMethodをラップするRecoverExceptionです。
-        Recoverableをgeneratorで実装するときに使います。
 
-        このクラスは、(exception,T)を返すgeneratorをラップして、recoverで再実行可能な状態にします。
-        generatorはnextで再実行可能な状態でなければなりません。
-    """
-    def __init__(self,asmethod:AsyncMethod[T]):
-        """
-            Args:
-        """
-        self._asmethod:AsyncMethod[T]=asmethod
-        return
-    def recover(self)->T:
-        """ 例外発生元のrunを再実行します。
-            例外が発生した場合、closeを実行してそのまま例外を再生成します。
-        """
-        assert(self._asmethod is not None)
-        try:
-            if self._asmethod.run():
-                # print("aaaa",self._asmethod.result)
-                return self._asmethod.result
-        except Exception as e:
-            #runが例外を発生したときは内部closeに期待する。
-            raise
-        asmethod=self._asmethod
-        self._asmethod=None
-        raise AsyncMethodRecoverException(asmethod)
-    def close(self):
-        assert(self._asmethod is not None)
-        try:
-            self._asmethod.close()
-        finally:
-            self._asmethod=None
+
 
 
 

@@ -3,7 +3,7 @@
 """
 from ..types import Iterator
 from ..interfaces import IRecoverableIterator
-from ..utils.recoverable import RecoverableStopIteration
+from .recoverable import RecoverableStopIteration
 
 
 class StopIteration_BitsWidthConvertIterator_FractionalBitsLeft(StopIteration):

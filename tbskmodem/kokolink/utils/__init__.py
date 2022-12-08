@@ -6,3 +6,5 @@ from .SumIterator import SumIterator
 from .AsyncMethod import AsyncMethod
 from .BufferedIterator import BufferedIterator
 from .BitsWidthConvertIterator import BitsWidthConvertIterator
+from .AverageInterator import AverageInterator
+

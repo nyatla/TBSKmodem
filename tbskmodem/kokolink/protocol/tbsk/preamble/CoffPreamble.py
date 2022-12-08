@@ -5,17 +5,28 @@ from tbskmodem.kokolink.protocol.tbsk.toneblock import TraitTone
 
 from ....types import NoneType
 from ....interfaces import IRoStream
-from ....utils.recoverable import AsyncMethodRecoverException, RecoverableStopIteration
-from ....utils import RingBuffer,BufferedIterator,AsyncMethod
+from ....utils.recoverable import RecoverableException, RecoverableStopIteration
+from ....utils import RingBuffer,BufferedIterator,AsyncMethod,AverageInterator
 from ....utils.math.corrcoef import SelfCorrcoefIterator
 from ....streams import BitStream
-from ..traitblockcoder import AverageInterator, TraitBlockEncoder
+from ..traitblockcoder import TraitBlockEncoder
 from .Preamble import Preamble
 
 
 
 T=TypeVar("T")
 class CoffPreamble(Preamble):
+    class PreambleBits(TraitBlockEncoder):
+        def __init__(self,symbol:TraitTone,cycle:int):
+            super().__init__(symbol)
+            b=[1]*cycle
+            c=[i%2 for i in range(cycle)]
+            d=[(1+c[-1])%2,(1+c[-1])%2,c[-1],]
+            self.setInput(BitStream([0,1]+b+[1]+c+d,bitwidth=1))
+            # return enc.setInput(BitStream([0,1]+[1,1]+[1]+[0,1]+[0,0,1],1))
+            # return enc.setInput(BitStream([0,1,1,1,1,0,1,0,0,1],1))
+
+
     """ 台形反転信号プリアンブルです。
     """
     def __init__(self,tone:TraitTone,threshold:float=1.0,cycle:int=4):
@@ -24,19 +35,13 @@ class CoffPreamble(Preamble):
         self._cycle=cycle #平坦部分のTick数
         self._asmethtod_lock:bool=False
     def getPreamble(self)->IRoStream[float]:
-        enc=TraitBlockEncoder(self._symbol)
-        b=[1]*self._cycle
-        c=[i%2 for i in range(self._cycle)]
-        d=[(1+c[-1])%2,(1+c[-1])%2,c[-1],]
-        return enc.setInput(BitStream([0,1]+b+[1]+c+d,bitwidth=1))
-        # return enc.setInput(BitStream([0,1]+[1,1]+[1]+[0,1]+[0,0,1],1))
-        # return enc.setInput(BitStream([0,1,1,1,1,0,1,0,0,1],1))
+        return self.PreambleBits(self._symbol,self._cycle)
 
     class waitForSymbolResultAsInt(int):
         def __new__(cls,v:int):
             r=super().__new__(cls,v)
             return r
-    class ASwaitForSymbol(AsyncMethod[Union[waitForSymbolResultAsInt,NoneType]]):
+    class WaitForSymbolAS(AsyncMethod[Union[waitForSymbolResultAsInt,NoneType]]):
         def __init__(self,parent:"CoffPreamble",src:IRoStream[float]):
             super().__init__()
             symbol_ticks=len(parent._symbol)
@@ -155,7 +160,7 @@ class CoffPreamble(Preamble):
                         s=peak_pos-symbol_ticks*sample_width-(self._nor-cofbuf_len)
                         lw=cof.buf[s:s+cycle*symbol_ticks]
                         lw.sort()
-                        lw=lw[:len(lw)*3//2+1]
+                        #lw=lw[:len(lw)*3//2+1]#効いてないので一時的にコメントアウト
                         if sum(lw)/len(lw)>lw[0]*0.66:
                             # print("ERR(L",peak_pos+src.pos,sum(lw)/len(lw),min(lw))
                             self._co_step=0#co_step0からやり直す。
@@ -165,7 +170,7 @@ class CoffPreamble(Preamble):
                         s=peak_pos-symbol_ticks*sample_width*2-(self._nor-cofbuf_len)
                         lh=cof.buf[s:s+cycle*symbol_ticks]
                         lh.sort(reverse=True)
-                        lh=lh[:len(lh)*3//2+1]
+                        #lh=lh[:len(lh)*3//2+1] 効いてないので一時的にコメントアウト
                         if sum(lh)/len(lh)<lh[0]*0.66:
                             # print("ERR(H",peak_pos+src.pos,sum(lh)/len(lh),max(lh))
                             self._co_step=0 #co_step0からやり直す。
@@ -197,12 +202,12 @@ class CoffPreamble(Preamble):
         """
 
         assert(self._asmethtod_lock==False)
-        asmethtod=self.ASwaitForSymbol(self,src)
+        asmethtod=self.WaitForSymbolAS(self,src)
         if asmethtod.run():
             return asmethtod.result
         else:
-            #ロックする（解放はASwaitForSymbolのclose内で。）
+            #ロックする（解放はWaitForSymbolASのclose内で。）
             self._asmethtod_lock=True
-            raise AsyncMethodRecoverException(asmethtod)
+            raise RecoverableException(asmethtod)
 
 
