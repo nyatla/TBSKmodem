@@ -19,8 +19,8 @@ class RecoverableException(Exception,Generic[T]):
 
         再実行しない場合は、例外ハンドラでclose関数で再試行セッションを閉じてください。
     """
-    def __init__(self,recoverable_instance:AsyncMethod[T]):
-        self._recoverable_instance=recoverable_instance
+    def __init__(self,recover_instance:AsyncMethod[T]):
+        self._recover_instance=recover_instance
     def detach(self)->T:
         if self._recover_instance is None:
             raise RuntimeError()
