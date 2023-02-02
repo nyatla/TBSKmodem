@@ -11,6 +11,12 @@ TBSK (Trait Block Shift Keying) modemは、FFT/IFTTを使わない、低速、�
 
 [Youtube](https://www.youtube.com/watch?v=4cB3hWATDUQ)でみる（信号音付きです。）
 
+- TBSKmodem for C#
+- TBSKmodem for C++
+- TBSKmodem for JavaScript
+- TBSKmodem for Java
+- TBSKmodem for Processing
+
 
 ## 性能
 
