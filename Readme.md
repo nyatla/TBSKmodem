@@ -5,17 +5,22 @@ English document 👉[Readme.en.md](Readme.en.md)
 TBSK (Trait Block Shift Keying) modemは、FFT/IFTTを使わない、低速、短距離の音響通信の実装です。
 バイト/ビットストリームの振幅信号への変調、振幅信号からバイト/ビットストリームへの復調ができます。
 
-開発用のライブラリと、コンソールアプリ[tbskmodem](tbskmodem.md)があります。
+Pythonプラットフォーム向けには、開発用のライブラリとコンソールアプリ[tbskmodem](tbskmodem.md)があります。
 
 ![preview_tbsk](https://user-images.githubusercontent.com/2483108/194768184-cecddff0-1fa4-4df8-af3f-f16ed4ef1718.gif)
 
 [Youtube](https://www.youtube.com/watch?v=4cB3hWATDUQ)でみる（信号音付きです。）
 
-- TBSKmodem for C#
-- TBSKmodem for C++
-- TBSKmodem for JavaScript
-- TBSKmodem for Java
-- TBSKmodem for Processing
+## 対応プラットフォーム
+
+Pythonプラットフォーム以外にも、メジャーな言語向けの実装があります。
+
+- TBSKmodem for Python
+- [TBSKmodem for C#](https://github.com/nyatla/TBSKmodemCS)
+- [TBSKmodem for C++](https://github.com/nyatla/TBSKmodemCpp)
+- [TBSKmodem for JavaScript](https://github.com/nyatla/TBSKmodemJS)
+- [TBSKmodem for Java](https://github.com/nyatla/TBSKmodemJava)
+- [TBSKmodem for Processing](https://github.com/nyatla/TBSKmodem-for-Processing)
 
 
 ## 性能
