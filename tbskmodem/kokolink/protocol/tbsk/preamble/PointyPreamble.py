@@ -4,7 +4,7 @@
 
 
 from ....utils import RingBuffer
-from ....utils.math.corrcoef import SelfCorrcoefIterator
+from ....utils.math.corrcoef import ISelfCorrcoefIterator
 from ....streams import RoStream,BitStream
 from ....interfaces import IRoStream
 from ..traitblockcoder import TraitBlockEncoder
@@ -36,7 +36,7 @@ class PointyPreamble(Preamble):
         """
         symbol_ticks=len(self._symbol)
         ave_window=(symbol_ticks//10)+3
-        cof=SelfCorrcoefIterator(symbol_ticks,src,symbol_ticks)
+        cof=ISelfCorrcoefIterator.createNormalized(symbol_ticks,src,symbol_ticks)
         nor=0
         rb=RingBuffer(symbol_ticks*2,0)
         th=self._threshold

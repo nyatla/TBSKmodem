@@ -7,7 +7,7 @@ from ....types import NoneType
 from ....interfaces import IRoStream
 from ....utils.recoverable import RecoverableException, RecoverableStopIteration
 from ....utils import RingBuffer,BufferedIterator,AsyncMethod,AverageInterator
-from ....utils.math.corrcoef import SelfCorrcoefIterator
+from ....utils.math.corrcoef import ISelfCorrcoefIterator
 from ....streams import BitStream
 from ..traitblockcoder import TraitBlockEncoder
 from .Preamble import Preamble
@@ -49,7 +49,7 @@ class CoffPreamble(Preamble):
             cofbuf_len=symbol_ticks*(6+parent._cycle*2)
             # cofbuf_len=symbol_ticks*10
             self._parent=parent
-            self._cof=BufferedIterator[float](SelfCorrcoefIterator(symbol_ticks,src,symbol_ticks),cofbuf_len,0)
+            self._cof=BufferedIterator[float](ISelfCorrcoefIterator.createNormalized(symbol_ticks,src,symbol_ticks),cofbuf_len,0)
             self._avi=AverageInterator[float](self._cof,symbol_ticks)
             sample_width=parent._cycle+1
             # rb=RingBuffer(symbol_ticks*3,0)
