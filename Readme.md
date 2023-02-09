@@ -148,8 +148,7 @@ Imported local library.
 メイン関数を見てみましょう。
 ```
 def main():
-    # tone=SinTone(10,10).mul(0.5)      # DPSK
-    tone=XPskSinTone(10,10).mul(0.5)    # SSFM DPSK
+    tone=TbskTone.createXPskSin(10,10).mul(0.5)    # SSFM DPSK
     payload=[0,1,0,1,0,1,0,1]*16 # 16byte
     carrier=8000
 
@@ -162,7 +161,7 @@ def main():
         PcmData.dump(PcmData(src_pcm,16,carrier),fp)
 ```
 
-このスクリプトは、まず伝送シンボルに相当するXPskSinToneオブジェクトを生成します。
+このスクリプトは、まず伝送シンボルに相当するTraitToneオブジェクトを生成します。
 次に、変調器のTbskModulatorオブジェクトを生成して、modulateAsBit関数で変調します。
 変調するのはビット値(1 or 0)の配列で、合計8*16=128ビットです。
 
@@ -186,8 +185,7 @@ def main():
     with open("step1.wav","rb") as fp:
         wav=PcmData.load(fp)
 
-    # tone=SinTone(20,8)
-    tone=XPskSinTone(10,10)
+    tone=TbskTone.createXPskSin(10,10)
     demod=TbskDemodulator(tone)
 
     ret=demod.demodulateAsBit(wav.dataAsFloat())
@@ -218,7 +216,7 @@ step3_bytedata.pyは、bytes値の変調と復調を実行します。
 
 ```
 def main():
-    tone=XPskSinTone(10,10).mul(0.5)    # SSFM DPSK
+    tone=TbskTone.createXPskSin(10,10).mul(0.5)    # SSFM DPSK
     payload=b"0123456789" # 10byte
     carrier=8000
 
@@ -257,7 +255,7 @@ step4_text.pyは、文字列の変調と復調を実行します。
 
 ```
 def main():
-    tone=XPskSinTone(10,10).mul(0.5)    # SSFM DPSK
+    tone=TbskTone.createXPskSin(10,10).mul(0.5)    # SSFM DPSK
     payload="アンタヤルーニャ" # 8byte
     carrier=8000
 

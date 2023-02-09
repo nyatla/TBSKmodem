@@ -1,7 +1,7 @@
 """ pythonの標準クラス名の解決
 
 """
-from typing import Generic, Tuple,List,Iterable, Iterator,Generator,Sequence,Deque,BinaryIO,Dict, TypeVar
+from typing import Generic, Tuple,List,Iterable, Iterator,Generator,Sequence,Deque,BinaryIO,Dict, TypeVar,Union
 
 try:
     from types import  NoneType    

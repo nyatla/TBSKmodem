@@ -2,14 +2,14 @@
 """
 import sys,os
 try:
-    from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData
+    from tbskmodem import TbskModulator,TbskDemodulator,TbskTone,PcmData
 except ModuleNotFoundError:
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-    from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData
+    from tbskmodem import TbskModulator,TbskDemodulator,TbskTone,PcmData
     print("[WARN] Imported local library.")
 
 def main():
-    tone=XPskSinTone(10,10).mul(0.5)    # SSFM DPSK
+    tone=TbskTone.createXPskSin(10,10).mul(0.5)    # SSFM DPSK
     payload=b"0123456789" # 10byte
     carrier=8000
 

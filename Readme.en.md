@@ -131,8 +131,7 @@ This script modulates bits and save result to step1.wav.
 See main function.
 ```
 def main():
-    # tone=SinTone(10,10).mul(0.5)      # DPSK
-    tone=XPskSinTone(10,10).mul(0.5)    # SSFM DPSK
+    tone=TbskTone.createXPskSin(10,10).mul(0.5)    # SSFM DPSK
     payload=[0,1,0,1,0,1,0,1]*16 # 16byte
     carrier=8000
 
@@ -145,7 +144,7 @@ def main():
         PcmData.dump(PcmData(src_pcm,16,carrier),fp)
 ```
 
-First, this script creates XPskSinTone objects that use to transmission symbols.
+First, this script creates TraitTone objects that use to transmission symbols.
 Next, create a modulator TbskModulator object and modulate it with the modulateAsBit function.
 Modulating source is an array of bit values (1 or 0), totaling 8*16=128 bits.
 
@@ -170,8 +169,7 @@ def main():
     with open("step1.wav","rb") as fp:
         wav=PcmData.load(fp)
 
-    # tone=SinTone(20,8)
-    tone=XPskSinTone(10,10)
+    tone=TbskTone.createXPskSin(10,10)
     demod=TbskDemodulator(tone)
 
     ret=demod.demodulateAsBit(wav.dataAsFloat())
@@ -203,7 +201,7 @@ step3_bytedata.py performs modulation and demodulation of bytes values.
 See main function.
 ```
 def main():
-    tone=XPskSinTone(10,10).mul(0.5)    # SSFM DPSK
+    tone=TbskTone.createXPskSin(10,10).mul(0.5)    # SSFM DPSK
     payload=b"0123456789" # 10byte
     carrier=8000
 
@@ -241,7 +239,7 @@ step4_text.py modulates and demodulate text as UTF-8.
 See main function.
 ```
 def main():
-    tone=XPskSinTone(10,10).mul(0.5)    # SSFM DPSK
+    tone=TbskTone.createXPskSin(10,10).mul(0.5)    # SSFM DPSK
     payload="アンタヤルーニャ"
     carrier=8000
 

@@ -3,15 +3,15 @@
 import threading
 import sys,os
 try:
-    from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData,SoundDeviceInputIterator
+    from tbskmodem import TbskModulator,TbskDemodulator,TbskTone,PcmData,SoundDeviceInputIterator
 except ModuleNotFoundError:
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-    from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData,SoundDeviceInputIterator
+    from tbskmodem import TbskModulator,TbskDemodulator,TbskTone,PcmData,SoundDeviceInputIterator
     print("[WARN] Imported local library.")
 
 def main():
     #save to sample
-    tone=XPskSinTone(10,10).mul(0.5)    # SSFM DPSK
+    tone=TbskTone.createXPskSin(10,10).mul(0.5)    # SSFM DPSK
     payload="アンタヤルーニャ" # ?byte
     carrier=16000
 

@@ -2,10 +2,10 @@
 """
 import sys,os
 try:
-    from tbskmodem import TbskDemodulator,XPskSinTone,PcmData
+    from tbskmodem import TbskDemodulator,TbskTone,PcmData
 except ModuleNotFoundError:
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-    from tbskmodem import TbskDemodulator,XPskSinTone,PcmData
+    from tbskmodem import TbskDemodulator,TbskTone,PcmData
     print("[WARN] Imported local library.")
 
 def main():
@@ -14,7 +14,7 @@ def main():
         wav=PcmData.load(fp)
 
     # tone=SinTone(20,8)
-    tone=XPskSinTone(10,10)
+    tone=TbskTone.createXPskSin(10,10)
     demod=TbskDemodulator(tone)
 
     ret=demod.demodulateAsBit(wav.dataAsFloat())

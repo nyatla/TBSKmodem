@@ -8,12 +8,13 @@ import sys,os
 
 is_local_library=False
 
+
 try:
-    from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData,SoundDeviceInputIterator,SoundDeviceAudioPlayer,SinTone, TraitTone,MSeqTone, PnTone,__version__
+     from tbskmodem import TbskModulator,TbskDemodulator,TbskTone,TraitTone,PcmData,SoundDeviceInputIterator,SoundDeviceAudioPlayer,__version__
 except ModuleNotFoundError:
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-    from tbskmodem import TbskModulator,TbskDemodulator,XPskSinTone,PcmData,SoundDeviceInputIterator,SoundDeviceAudioPlayer,SinTone, TraitTone,MSeqTone,PnTone,__version__
-    is_local_library=True
+     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+     from tbskmodem import TbskModulator,TbskDemodulator,TbskTone,TraitTone,PcmData,SoundDeviceInputIterator,SoundDeviceAudioPlayer,__version__
+     is_local_library=True
 
 
 lprint=print
@@ -40,15 +41,15 @@ def str2tone(param:str,carrier:int)->TraitTone:
             if v is not None:
                 p=v.group().split(",")
                 if len(p)==2:
-                    return XPskSinTone(int(p[0]),int(p[1]))
+                    return TbskTone.createXPskSin(int(p[0]),int(p[1]))
                 elif len(p)==3:
-                    return XPskSinTone(int(p[0]),int(p[1]),int(p[2]))
+                    return TbskTone.createXPskSin(int(p[0]),int(p[1]),int(p[2]))
             raise RuntimeError("xpsk must be 'xpsk:point,cycle,(shift)' 'ex xpsk:10:10'")
         elif name=="sin":
             v=re.match(r'^[1-9][0-9]*(\,[1-9][0-9]*)$',value)
             if v is not None:
                 p=v.group().split(",")
-                return SinTone(int(p[0]),int(p[1]))
+                return TbskTone.createSin(int(p[0]),int(p[1]))
             raise RuntimeError("sin must be 'sin:point,cycle' ex 'sin:10,10'")
         elif name=="pn":
             v=re.match(r'^[1-9][0-9]*(\,[1-9][0-9]*)\,',value)
@@ -57,7 +58,7 @@ def str2tone(param:str,carrier:int)->TraitTone:
                 subtone=value[v.span()[1]:]
                 if "pn" in subtone:
                     raise ValueError("Recursion error")
-                return PnTone(int(p[0]),int(p[1]),str2tone(subtone,carrier))
+                return TbskTone.createPn(int(p[0]),int(p[1]),str2tone(subtone,carrier))
             raise RuntimeError("pn must be 'pn:seed,interval,basetone' ex 'pn:299,2,sin:10,10'")
         elif name=="mseq":
             v=re.match(r'^[1-9][0-9]*(\,[1-9][0-9]*)\,',value)
@@ -67,7 +68,7 @@ def str2tone(param:str,carrier:int)->TraitTone:
                 subtone=value[v.span()[1]:]
                 if "mseq" in subtone:
                     raise ValueError("Recursion error")
-                return MSeqTone(int(p[0]),int(p[1]),str2tone(subtone,carrier))
+                return TbskTone.createMSeq(int(p[0]),int(p[1]),str2tone(subtone,carrier))
             raise RuntimeError("Parameter must be 'mseq:bit,tap,base_tone' ex'mseq:3,2,sin:10,10'")
         elif name=="pcm":
             with open(value,"rb") as fp:

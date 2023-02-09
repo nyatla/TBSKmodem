@@ -1,15 +1,12 @@
-from asyncio.constants import DEBUG_STACK_DEPTH
 from itertools import chain
 from typing import Callable, overload,Union,Generic,TypeVar
 
 
-from ...types import NoneType, Iterable, Iterator,Generator,Tuple
+from ...types import Iterable, Iterator
 from ...utils.recoverable import  RecoverableException, RecoverableStopIteration
 from ...utils import AsyncMethod
-from ...utils.functions import isinstances
 from ...interfaces import IBitStream, IFilter,IRoStream,IRecoverableIterator
-from ...filter import BitsWidthFilter,Bits2BytesFilter,Bits2StrFilter
-from ...streams import ByteStream
+from ...filter import BitsWidthFilter
 from ...streams.rostreams import BasicRoStream
 from ...streams import BitStream,RoStream
 
@@ -19,25 +16,6 @@ from .preamble import Preamble,CoffPreamble
 
 
 
-import struct
-class Bits2HexStrFilter(IFilter[IRoStream[int],str],BasicRoStream[str]):
-    """ nBit intイテレータから1バイト単位のhex stringを返すフィルタです。
-    """
-    def __init__(self,input_bits:int=1):
-        self._src=BitsWidthFilter(input_bits=input_bits,output_bits=8)
-    def __next__(self) -> str:
-        while True:
-            try:
-                d=self._src.__next__()
-            except RecoverableStopIteration:
-                raise
-            return bytes.hex(struct.pack("1B",d))
-    def setInput(self,src:IRoStream[int])->"Bits2HexStrFilter":
-        self._src.setInput(src)
-        return self
-    @property
-    def pos(self)->int:
-        return self._src.pos
 
 
 
@@ -49,7 +27,7 @@ from .traitblockcoder import TraitBlockEncoder,TraitBlockDecoder
 
 
 
-class TbskModulator:
+class TbskModulator_impl:
     """ TBSKの変調クラスです。
         プリアンブルを前置した後にビットパターンを置きます。
     """
@@ -102,56 +80,13 @@ class TbskModulator:
             self._enc.setInput(self.DiffBitEncoder(0,BitStream(src,1))),
             [0]*ave_window_shift    #demodulatorが平均値で補正してる関係で遅延分を足してる。
         )
-    def modulateAsHexStr(self,src:Union[str,bytes]):
-        """ hex stringを変調します。
-            hex stringは(0x)?[0-9a-fA-F]{2}形式の文字列です。
-            hex stringはbytesに変換されて送信されます。
-        """
-        sstr:str
-        if isinstance(src,bytes):
-            sstr=src.decode("utf-8")
-        else:
-            sstr=src
-        if sstr[:2]=="0x":
-            sstr=sstr[2:]
-            # print(sstr)
-        return self.modulate(bytes.fromhex(sstr))
-    @overload
-    def modulate(self,src:Iterable[int],bitwidth:int=8)->Iterator[float]:
-        ...
-    @overload
-    def modulate(self,src:Iterator[int],bitwidth:int=8)->Iterator[float]:
-        ...
-    @overload
-    def modulate(self,src:bytes)->Iterator[float]:
-        ...
-    @overload
-    def modulate(self,src:str,encoding="utf-8")->Iterator[float]:
-        ...
-    def modulate(self,*args,**kwds)->Iterator[float]:
-        def __modulate_A(src:Iterator[int],bitwidth:int=8)->Iterator[float]:
-            return self.modulateAsBit(BitsWidthFilter(bitwidth).setInput(RoStream[int](src)))
-        def __modulate_B(src:Iterable[int],bitwidth:int=8)->Iterator[float]:
-            return self.modulateAsBit(BitsWidthFilter(bitwidth).setInput(RoStream[int](src)))
-        def __modulate_C(src:bytes)->Iterator[float]:
-            return self.modulateAsBit(BitsWidthFilter(8).setInput(ByteStream(src)))
-        def __modulate_D(src:str,encoding:str="utf-8")->Iterator[float]:
-            return self.modulateAsBit(BitsWidthFilter(8).setInput(ByteStream(src,encoding=encoding)))
-        if isinstances(args,(Iterator,),(kwds,{"bitwidth":int})):
-            return __modulate_A(*args,**kwds)
-        elif isinstances(args,(bytes,)):
-            return __modulate_C(*args,**kwds)
-        elif isinstances(args,(str,),(kwds,{"encoding":str})):
-            return __modulate_D(*args,**kwds)
-        elif isinstances(args,(Iterable,),(kwds,{"bitwidth":int})):
-            return __modulate_B(*args,**kwds)
-        else:
-            raise TypeError()
+
+
             
 
 
 DSTTYPE=TypeVar("DSTTYPE")
-class TbskDemodulator:
+class TbskDemodulator_impl:
     class AsyncDemodulate(AsyncMethod[IRecoverableIterator[DSTTYPE]],Generic[DSTTYPE]):
         def __init__(self,parent:"TbskDemodulator",src:Union[IRoStream[float],Iterable[float],Iterator[float]],builder:Callable[[TraitBlockDecoder],IRecoverableIterator[DSTTYPE]]):
             super().__init__()
@@ -242,57 +177,6 @@ class TbskDemodulator:
         """
         assert(self._asmethod_lock==False)
         asmethod=self.AsyncDemodulate[int](self,src,lambda s:s)
-        if asmethod.run():
-            return asmethod.result
-        else:
-            self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
-            raise RecoverableException(asmethod) 
-    
-    def demodulateAsInt(self,src:Union[Iterator[float],Iterator[float]],bitwidth:int=8)->IRecoverableIterator[int]:
-        """ TBSK信号からnビットのint値配列を復元します。
-            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
-            RecoverExceptionが搬送するクラスは、AsyncDemodulate[AsyncMethod[IRecoverableIterator[int]]です。
-        """
-        assert(self._asmethod_lock==False)
-        asmethod=self.AsyncDemodulate[int](self,src,lambda s:BitsWidthFilter(input_bits=1,output_bits=bitwidth).setInput(s))
-        if asmethod.run():
-            return asmethod.result
-        else:
-            self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
-            raise RecoverableException(asmethod) 
-
-    def demodulateAsBytes(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[bytes]:
-        """ TBSK信号からnビットのint値配列を復元します。
-            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
-            RecoverExceptionが搬送するクラスは、AsyncDemodulate[AsyncMethod[IRecoverableIterator[int]]です。
-        """
-        assert(self._asmethod_lock==False)
-        asmethod=self.AsyncDemodulate[int](self,src,lambda s:Bits2BytesFilter(input_bits=1).setInput(s))
-        if asmethod.run():
-            return asmethod.result
-        else:
-            self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
-            raise RecoverableException(asmethod) 
-
-    def demodulateAsStr(self,src:Union[Iterator[float],Iterator[float]],encoding:str="utf-8")->IRecoverableIterator[str]:
-        """ TBSK信号からsize文字単位でstrを返します。
-            途中でストリームが終端した場合、既に読みだしたビットは破棄されます。
-            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
-            RecoverExceptionが搬送するクラスは、AsyncDemodulate[AsyncMethod[IRecoverableIterator[str]]です。
-        """
-        assert(self._asmethod_lock==False)
-        asmethod=self.AsyncDemodulate[str](self,src,lambda s:Bits2StrFilter(encoding=encoding).setInput(s))
-        if asmethod.run():
-            return asmethod.result
-        else:
-            self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
-            raise RecoverableException(asmethod) 
-    def demodulateAsHexStr(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[str]:
-        """
-            RecoverExceptionが搬送するクラスは、AsyncDemodulate[AsyncMethod[IRecoverableIterator[str]]です。
-        """
-        assert(self._asmethod_lock==False)
-        asmethod=self.AsyncDemodulate[str](self,src,lambda s:Bits2HexStrFilter().setInput(s))
         if asmethod.run():
             return asmethod.result
         else:

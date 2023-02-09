@@ -16,6 +16,8 @@ from .Preamble import Preamble
 
 T=TypeVar("T")
 class CoffPreamble(Preamble):
+    DEFAULT_TH:float=1.0
+    DEFAULT_CYCLE:int=4
     class PreambleBits(TraitBlockEncoder):
         def __init__(self,symbol:TraitTone,cycle:int):
             super().__init__(symbol)
@@ -29,7 +31,7 @@ class CoffPreamble(Preamble):
 
     """ 台形反転信号プリアンブルです。
     """
-    def __init__(self,tone:TraitTone,threshold:float=1.0,cycle:int=4):
+    def __init__(self,tone:TraitTone,threshold:float=DEFAULT_TH,cycle:int=DEFAULT_CYCLE):
         self._threshold=threshold
         self._symbol=tone
         self._cycle=cycle #平坦部分のTick数
