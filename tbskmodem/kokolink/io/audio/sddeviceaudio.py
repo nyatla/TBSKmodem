@@ -11,12 +11,12 @@ https://python-sounddevice.readthedocs.io/
 """
 
 
+import itertools
 from time import sleep
 import sounddevice as sd
-from typing import Iterable, Iterator, overload,Union
+from typing import  Iterator, overload,Union
 import sys
 from threading import Lock,Event
-import itertools
 
 
 import logging
@@ -26,6 +26,7 @@ from .audioif import IAudioPlayer,IAudioInputInterator
 from ...utils.functions import isinstances
 from ...utils.wavefile import PcmData
 from ...types import Sequence,BinaryIO,Queue,Empty,NoneType
+from ...utils import FloatConverter
 
 
 
@@ -36,26 +37,15 @@ class Bytes8to2FloatIterator(Iterator[float]):
     def __init__(self,src:bytes):
         self._src=iter(src)
     def __next__(self) -> float:
-        return next(self._src)/255-0.5
+        return FloatConverter.byteToDouble(self._src)
 
 class Bytes16to2FloatIterator(Iterator[float]):
     def __init__(self,src:bytes):
         self._src=iter(src)
     def __next__(self) -> float:
-        r=(2**16-1)//2 #Daisukeパッチ
-        # b=struct.pack("2B",next(self._src),next(self._src))
-        # d=struct.unpack("<h",b)[0]
-        # return struct.unpack("<h",b)[0]/r
-        # f=next(self._src)
-        # g=next(self._src)
-        # c=g<<8 | f
-        # k=c if 0x8000 & c == 0 else c-0xffff-1
-        # h=struct.unpack("<h",struct.pack("2B",f,g))[0]
-        # assert(h==k)
-        # return h/r
-        c=next(self._src) | next(self._src)<<8
-        k=c if 0x8000 & c == 0 else c-0xffff-1
-        return k/r
+        c=next(self._src) | (next(self._src)<<8) #uint16
+        return FloatConverter.int16ToDouble(c if 0x8000 & c == 0 else c-0xffff-1)
+
 
 
 

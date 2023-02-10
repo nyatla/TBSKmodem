@@ -1,12 +1,9 @@
-#import numpy as np
-import struct
 from typing import Union, overload
-# import os,sys
-# sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 from ...types import Sequence,Tuple
 
 from ...utils.functions import isinstances
+from ...utils import FloatConverter
 from .riffio import Chunk, RawChunk, WaveFile,fmtChunk
 
 
@@ -18,20 +15,12 @@ def float2bytes(fdata:Sequence[float],bits:int)->bytes:
     """-1<n<1をWaveファイルペイロードへ変換
     """
     if bits==8:
-        # a=np.array([i*127+128 for i in fdata]).astype("uint8").tobytes()
-        # b=b"".join([struct.pack("B",int(i*127+128)) for i in fdata])
-        # print(a==b)
-        # assert(a==b)
-        # return np.array([i*127+128 for i in fdata]).astype("uint8").tobytes()
-        return b"".join([struct.pack("B",int(i*127+128)) for i in fdata]) #unsigned byte
+        #return b"".join([struct.pack("B",int(i*127+128)) for i in fdata]) #unsigned byte        
+        return b"".join([FloatConverter.doubleToByte(i).to_bytes(1,'little',signed=False) for i in fdata]) #unsigned byte
     elif bits==16:
-        r=(2**16-1)//2 #Daisukeパッチ
-        # a=b"".join([struct.pack("<h",int(i*r)) for i in fdata])
-        # b=np.array([i*r for i in fdata]).astype("int16").tobytes()
-        # print(a==b)
-        # assert(a==b)
-        # return np.array([i*r for i in fdata]).astype("int16").tobytes()
-        return b"".join([struct.pack("<h",int(i*r)) for i in fdata]) #signed short
+        #r=(2**16-1)//2 #Daisukeパッチ
+        #return b"".join([struct.pack("<h",int(i*r)) for i in fdata]) #signed short
+        return b"".join([FloatConverter.doubleToInt16(i).to_bytes(2,'little',signed=True) for i in fdata]) #unsigned byte
     raise ValueError()
 
 class PcmData:
@@ -123,15 +112,15 @@ class PcmData:
             # b=list(np.frombuffer(data, dtype="uint8")/256-0.5)
             # print(a==b)
             # return list(np.frombuffer(data, dtype="uint8")/256-0.5)
-            return [struct.unpack_from("B",data,i)[0]/255-0.5 for i in range(len(data))]
+            return [FloatConverter.byteToDouble(int.from_bytes(data[i],signed=False)) for i in range(len(data))]
         elif bits==16:
-            assert(len(data)%2==0)
-            r=(2**16-1)//2 #Daisukeパッチ
+            # assert(len(data)%2==0)
+            # r=(2**16-1)//2 #Daisukeパッチ
             # a=[struct.unpack_from("<h",data,i*2)[0]/r for i in range(len(data)//2)]
             # b=list(np.frombuffer(data, dtype="int16")/r)
             # print(a==b)
             # return list(np.frombuffer(data, dtype="int16")/r)
-            return [struct.unpack_from("<h",data,i*2)[0]/r for i in range(len(data)//2)]
+            return [FloatConverter.int16ToDouble(int.from_bytes(data[i*2:i*2+2],'little',signed=True)) for i in range(len(data)//2)]
         raise ValueError()  
 
 
