@@ -27,10 +27,10 @@ from ...utils.functions import isinstances
 from ...utils.wavefile import PcmData
 from ...types import Sequence,BinaryIO,Queue,Empty,NoneType
 from ...utils import FloatConverter
+from ...utils.math import Rms
 
 
 
-import struct
 from typing import Union
 from ...types import Iterator
 class Bytes8to2FloatIterator(Iterator[float]):
@@ -168,20 +168,35 @@ class SoundDeviceInputIterator(IAudioInputInterator):
         self._dtype={8:"uint8",16:"int16"}[bits_par_sample]
         self._rate=framerate
         self._stream:sd.Stream=None
-        self._q=Queue[float]()
+        self._q=Queue[float](maxsize=framerate)
         self._device=device_id
         self._terminate=None
         self._lock = Lock()
         self._samplebits=bits_par_sample
+        self._rms:Rms=Rms(max(framerate // 100, 10))
 
 
         def audio_callback(indata, frames, time, status):
             """This is called (from a separate thread) for each audio block."""
             if status:
                 print("[WARN] "+status, file=sys.stderr)
-            a=self.array2float(indata[::, 0],self._samplebits)
-            for i in a:
-                self._q.put(i)
+            a=indata[::, 0]
+            if(self._samplebits==8):
+                for i in a:
+                    v=FloatConverter.byteToDouble(i)
+                    self._rms.update(v)
+                    if self._q.full():
+                        self._q.get()
+                    self._q.put(v)
+            elif(self._samplebits==16):
+                for i in a:
+                    v=FloatConverter.int16ToDouble(i)
+                    self._rms.update(v)
+                    if self._q.full():
+                        self._q.get()
+                    self._q.put(v)
+            else:
+                raise ValueError()
 
         self._stream = sd.InputStream(dtype=self._dtype,
             device=self._device, channels=1,
@@ -231,16 +246,11 @@ class SoundDeviceInputIterator(IAudioInputInterator):
         if not self._stream.closed:
             self._stream.close()
         self._stream=None
-    @staticmethod
-    def array2float(src:Sequence[int],bits:int)->Sequence[float]:
-        """waveペイロードをfloatシーケンスへ変換します。
-        """
-        if bits==8:
-            return src/255-0.5
-        if bits==16:
-            r=(2**16-1)//2 #Daisukeパッチ
-            return src/r
-        raise ValueError()
+    @property
+    def rms(self):
+        return self._rms.getLastRms()
+
+
 
 __all__=[SoundDeviceAudioPlayer,SoundDeviceInputIterator]
 

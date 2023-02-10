@@ -25,32 +25,39 @@ def main():
     print(carrier/len(tone),"bps")
     print("Play step6.wave in your player.")
     print("Start capturing")
-    
-    demod=TbskDemodulator(tone)
+    terminated=False
     with SoundDeviceInputIterator(carrier,device_id=None) as stream:
-        def checkInput():
-            print("Press [ENTER] to stop.")
+        def sub():
+            demod=TbskDemodulator(tone)
             try:
-                input()
-            except EOFError:
-                pass
-            finally:
-                stream.close()
-        th=threading.Thread(target=checkInput)
-        th.start() 
+                while not terminated:
+                    print(">",end="",flush=True)
+                    s=demod.demodulateAsStr(stream)
+                    if s is None:
+                        break
+                    for i in s:
+                        print(i,end="",flush=True)
+                    print("\nEnd of signal.")
+            except KeyboardInterrupt:
+                print("\nInterrupted.")
         try:
-            while True:
-                print(">",end="",flush=True)
-                s=demod.demodulateAsStr(stream)
-                if s is None:
-                    break
-                for i in s:
-                    print(i,end="",flush=True)
-                print("\nEnd of signal.")
-        except KeyboardInterrupt:
-            print("\nInterrupted.")
+            th=threading.Thread(target=sub)
+            th.start()
+            print("Press [ENTER] to stop.")
+            input()
+        except EOFError:
+            pass
         finally:
+            terminated=True
+            stream.close()#ストリームを止めてTBSKのブロッキングを解除
+            print("join")
             th.join()
+            print("closed")
+
+
+
+
+
 
 
 if __name__ == "__main__":

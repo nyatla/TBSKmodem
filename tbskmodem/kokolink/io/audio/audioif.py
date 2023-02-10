@@ -1,7 +1,7 @@
 """オーディオデバイス捜査のためのインタフェイスを定義します。
 
 """
-from abc import ABC,abstractmethod
+from abc import ABC,abstractmethod,abstractproperty
 
 from ...types import Iterator
 
@@ -66,5 +66,10 @@ class IAudioInputInterator(Iterator[float],ABC):
     @abstractmethod
     def close(self):
         """デバイスの利用を終了します。以降、デバイスの再利用はできません。
+        """
+        ...
+    @abstractproperty
+    def rms(self):
+        """入力値のRMSを返します。RMSは、min(フレームレート/100,10)サンプルから計算します。
         """
         ...

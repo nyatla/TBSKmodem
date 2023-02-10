@@ -2,6 +2,7 @@
     ターミナルにマイクの音量を表示します。
 """
 import threading
+import time
 import sys,os
 
 try:
@@ -15,32 +16,33 @@ import math
 def main():
     #save to sample
     carrier=8000
+    terminated=False
     with SoundDeviceInputIterator(carrier,device_id=None) as stream:
-        def checkInput():
-            print("Press [ENTER] to stop.")
+        def sub():
             try:
-                input()
-            except EOFError:
+                print("Volume meter")
+                print("",end="",flush=True)
+                while not terminated:
+                    v=int(max(0, (0 if stream.rms==0 else (math.log(stream.rms)+5)) * 5))
+                    print("\r" + '#'*v + ' '*(50 - v),end="",flush=True)
+                    time.sleep(0.03)
+            except StopIteration:
                 pass
-            finally:
-                stream.close()
-        th=threading.Thread(target=checkInput)
-        th.start()
+            except KeyboardInterrupt:
+                print("\nInterrupted.")
+            print("thread closed.")
         try:
-            scale=carrier//10
-            print("Volume meter")
-            print("",end="",flush=True)
-            while True:
-                v=sum([abs(next(stream)) for i in range(scale)])/scale
-                v=int(min(max(math.log10(v)+2.2,0),2)*25)
-                s="#"*v+" "*(50-v)
-                print("\r"+s,end="",flush=True)
-        except StopIteration:
+            th=threading.Thread(target=sub)
+            th.start()
+            print("Press [ENTER] to stop.")
+            input()
+        except EOFError:
             pass
-        except KeyboardInterrupt:
-            print("\nInterrupted.")
         finally:
+            terminated=True
             th.join()
+            print("closed")
+
         
 
 if __name__ == "__main__":
