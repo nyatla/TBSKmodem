@@ -21,7 +21,7 @@ class RecoverableException(Exception,Generic[T]):
     """
     def __init__(self,recover_instance:AsyncMethod[T]):
         self._recover_instance=recover_instance
-    def detach(self)->T:
+    def detach(self)->AsyncMethod[T]:
         if self._recover_instance is None:
             raise RuntimeError()
         r = self._recover_instance
