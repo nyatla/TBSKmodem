@@ -100,6 +100,7 @@ class TbskTone:
     @overload
     def createCustom(cls,d:Sequence[float])->TraitTone:
         ...
+    @classmethod
     def createCustom(cls,*args,**kwds)->TraitTone:
         if isinstances(args,(Sequence,)):
             return TraitTone(args[0])

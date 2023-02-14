@@ -6,7 +6,8 @@ from tbskmodem.kokolink.protocol.tbsk.toneblock import TraitTone
 from ....types import NoneType
 from ....interfaces import IRoStream
 from ....utils.recoverable import RecoverableException, RecoverableStopIteration
-from ....utils import RingBuffer,BufferedIterator,AsyncMethod,AverageInterator
+from ....utils.math import AverageInterator
+from ....utils import RingBuffer,BufferedIterator,AsyncMethod
 from ....utils.math.corrcoef import ISelfCorrcoefIterator
 from ....streams import BitStream
 from ..traitblockcoder import TraitBlockEncoder

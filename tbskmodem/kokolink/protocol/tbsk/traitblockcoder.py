@@ -5,7 +5,7 @@ from ...streams.rostreams import BasicRoStream
 from ...interfaces import IDecoder, IEncoder,IBitStream,IRoStream
 from ...utils.functions import isinstances
 from ...utils.math.corrcoef import ISelfCorrcoefIterator
-from ...utils import AverageInterator
+from ...utils.math import AverageInterator
 from .toneblock import TraitTone
 from ...types import Deque, Tuple
 
