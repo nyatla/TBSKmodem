@@ -2,8 +2,6 @@
     
 """
 
-from typing import Union
-
 from ..utils.recoverable import RecoverableStopIteration
 from ..interfaces import IBitStream
 from .rostreams import BasicRoStream
@@ -13,15 +11,9 @@ from ..types import Iterable,Iterator
 class BitStream(BasicRoStream[int],IBitStream):
     """ 任意ビット幅のintストリームを1ビット単位のビットストリームに展開します。
     """
-    def __init__(self,src:Union[Iterable[int],Iterator[int]],bitwidth:int=8):
+    def __init__(self,src:Iterator[int],bitwidth:int=8):
         super().__init__()
-        def toIterator(s):
-            if isinstance(s,Iterator):
-                return s
-            if isinstance(s,Iterable):
-                return iter(s)
-            raise Exception()        
-        self._bw=BitsWidthConvertIterator(toIterator(src),bitwidth,1)
+        self._bw=BitsWidthConvertIterator(src,bitwidth,1)
         self._pos=0
     def __next__(self)->int:
         try:

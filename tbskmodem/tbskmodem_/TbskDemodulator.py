@@ -1,5 +1,6 @@
+from typing import overload
 from ..kokolink.protocol.tbsk.tbskmodem import TbskDemodulator_impl
-from ..kokolink.types import Iterable,Iterator,Union
+from ..kokolink.types import Iterator,Union
 from ..kokolink.protocol.tbsk.toneblock import TraitTone
 from ..kokolink.protocol.tbsk.preamble import Preamble,CoffPreamble
 from ..kokolink.streams.rostreams import BasicRoStream
@@ -32,15 +33,25 @@ class Bits2HexStrFilter(IFilter[IRoStream[int],str],BasicRoStream[str]):
 
 
 class TbskDemodulator(TbskDemodulator_impl):
-
-
-
-
-
-    def __init__(self,tone:TraitTone,preamble:Preamble=None):
-        self._tone=tone
-        self._pa_detector=preamble if preamble is not None else CoffPreamble(tone,threshold=1.0)
-        self._asmethod_lock:bool=False
+    @overload
+    def __init__(self,tone:TraitTone):
+        ...
+    @overload
+    def __init__(self,tone:TraitTone,preamble_th:float,preamble_cycle:int):
+        ...
+    @overload
+    def __init__(self,tone:TraitTone,preamble:Preamble):
+        ...
+    def __init__(self,*args,**kwds):
+        if isinstances(args,(TraitTone,)):
+            super().__init__(args[0],CoffPreamble(args[0]))
+        elif isinstances(args,(TraitTone,float,int)):
+            print("YES")
+            super().__init__(args[0],CoffPreamble(args[0],args[1],args[2]))
+        elif isinstances(args,(TraitTone,Preamble)):
+            super().__init__(args[0],args[1])
+        else:
+            raise ValueError()
 
     def demodulateAsBit(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[int]:
         """ TBSK信号からビットを復元します。

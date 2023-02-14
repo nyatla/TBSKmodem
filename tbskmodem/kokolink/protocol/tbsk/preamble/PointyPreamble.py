@@ -23,7 +23,7 @@ class PointyPreamble(Preamble):
         self._symbol=tone
     def getPreamble(self)->IRoStream[float]:
         enc=TraitBlockEncoder(self._symbol)
-        return enc.setInput(BitStream([0,1,1,0],1))
+        return enc.setInput(BitStream(iter([0,1,1,0]),1))
 
     class waitForSymbolResultAsInt(int):
         def __new__(cls,v:int):

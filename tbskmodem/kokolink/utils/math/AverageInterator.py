@@ -1,4 +1,4 @@
-from typing import overload,TypeVar
+from typing import TypeVar
 from .SumIterator import SumIterator
 from ...types import Iterator
 from ..recoverable import RecoverableStopIteration

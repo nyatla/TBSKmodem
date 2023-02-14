@@ -2,14 +2,15 @@ from math import sqrt
 from typing import Union
 
 
-from ....interfaces import IRecoverableIterator
+from .ISelfCorrcoefIterator import ISelfCorrcoefIterator
 from ....types import Deque, Iterable, Iterator
 from ...recoverable import RecoverableStopIteration
 
-class SelfCorrcoefIterator(IRecoverableIterator[float]):
+class SelfCorrcoefIterator(ISelfCorrcoefIterator):
     """ src[:]とsrc[shift:]の相関を返すストリームです。
         n番目に区間[n,n+window]と[n+shift,n+shift+window]の相関値を返します。
         開始からwindow-shift個の要素は0になります。
+        このクラスは誤差が蓄積する不具合があります。
     """
     def __init__(self,window:int,src:Union[Iterator[float],Iterable[float]],shift:int=0):
         self.xyi=[None]*window #Xi

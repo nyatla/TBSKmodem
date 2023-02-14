@@ -1,12 +1,11 @@
 from itertools import chain
-from typing import Callable, overload,Union,Generic,TypeVar
+from typing import Callable, Union,Generic,TypeVar
 
 
 from ...types import Iterable, Iterator
 from ...utils.recoverable import  RecoverableException, RecoverableStopIteration
 from ...utils import AsyncMethod
-from ...interfaces import IBitStream, IFilter,IRoStream,IRecoverableIterator
-from ...filter import BitsWidthFilter
+from ...interfaces import IBitStream, IRoStream,IRecoverableIterator
 from ...streams.rostreams import BasicRoStream
 from ...streams import BitStream,RoStream
 
@@ -64,22 +63,33 @@ class TbskModulator_impl:
 
     def __init__(self,tone:TraitTone,preamble:Preamble=None):
         """
-            Args:
-                tone
-                    特徴シンボルのパターンです。
         """
         self._tone=tone
         self._preamble=preamble if preamble is not None else CoffPreamble(self._tone)
         self._enc=TraitBlockEncoder(tone)
         
-    def modulateAsBit(self,src:Union[Iterable[int],Iterator[int]])->Iterator[float]:
-        ave_window_shift=max(int(len(self._tone)*0.1),2)//2 #検出用の平均フィルタは0.1*len(tone)//2だけずれてる。ここを直したらTraitBlockDecoderも直せ
+    def modulateAsBit(self,src:Union[Iterable[int],Iterator[int]],suffix:Iterable[float]=None,suffix_pad:bool=True)->Iterator[float]:
+        """
+        Args:
 
-        return chain(
+        suffix
+        ペイロードシンボルに続く任意振幅値。
+        suffix_pad
+        解析機に必要なパディング
+        """
+        ave_window_shift=max(int(len(self._tone)*0.1),2)//2 #検出用の平均フィルタは0.1*len(tone)//2だけずれてる。ここを直したらTraitBlockDecoderも直せ
+        if isinstance(src,Iterable):
+            src=iter(src)
+        ch=[
             self._preamble.getPreamble(),
             self._enc.setInput(self.DiffBitEncoder(0,BitStream(src,1))),
-            [0]*ave_window_shift    #demodulatorが平均値で補正してる関係で遅延分を足してる。
-        )
+        ]
+        if suffix is not None:
+            ch.append(suffix)
+        #demodulatorが平均値で補正してる関係で遅延分を足してる。
+        if suffix_pad:
+            ch.append([0]*ave_window_shift)
+        return chain.from_iterable(ch)
 
 
             

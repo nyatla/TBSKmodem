@@ -12,7 +12,7 @@ from ....utils.math.corrcoef import ISelfCorrcoefIterator
 from ....streams import BitStream
 from ..traitblockcoder import TraitBlockEncoder
 from .Preamble import Preamble
-
+from ..AlgorithmSwitch import AlgorithmSwitch
 
 
 T=TypeVar("T")
@@ -25,9 +25,9 @@ class CoffPreamble(Preamble):
             b=[1]*cycle
             c=[i%2 for i in range(cycle)]
             d=[(1+c[-1])%2,(1+c[-1])%2,c[-1],]
-            self.setInput(BitStream([0,1]+b+[1]+c+d,bitwidth=1))
-            # return enc.setInput(BitStream([0,1]+[1,1]+[1]+[0,1]+[0,0,1],1))
-            # return enc.setInput(BitStream([0,1,1,1,1,0,1,0,0,1],1))
+            self.setInput(BitStream(iter([0,1]+b+[1]+c+d),bitwidth=1))
+            # return enc.setInput(BitStream(iter([0,1]+[1,1]+[1]+[0,1]+[0,0,1]),1))
+            # return enc.setInput(BitStream(iter([0,1,1,1,1,0,1,0,0,1]),1))
 
 
     """ 台形反転信号プリアンブルです。
@@ -52,7 +52,7 @@ class CoffPreamble(Preamble):
             cofbuf_len=symbol_ticks*(6+parent._cycle*2)
             # cofbuf_len=symbol_ticks*10
             self._parent=parent
-            self._cof=BufferedIterator[float](ISelfCorrcoefIterator.createNormalized(symbol_ticks,src,symbol_ticks),cofbuf_len,0)
+            self._cof=BufferedIterator[float](AlgorithmSwitch.createSelfCorrcoefIterator(symbol_ticks,src,symbol_ticks),cofbuf_len,0)
             self._avi=AverageInterator[float](self._cof,symbol_ticks)
             sample_width=parent._cycle+1
             # rb=RingBuffer(symbol_ticks*3,0)

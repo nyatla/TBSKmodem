@@ -1,5 +1,5 @@
-from typing import overload,TypeVar
-
+from typing import overload
+from .AlgorithmSwitch import AlgorithmSwitch
 from ...utils.recoverable import RecoverableStopIteration
 from ...streams.rostreams import BasicRoStream
 from ...interfaces import IDecoder, IEncoder,IBitStream,IRoStream
@@ -129,7 +129,7 @@ class TraitBlockDecoder(IBitStream,IDecoder[IRoStream[float],int],BasicRoStream[
             self._is_eos=True
         else:
             self._is_eos=False        
-            self._cof=ISelfCorrcoefIterator.createNormalized(self._trait_block_ticks,src,self._trait_block_ticks)
+            self._cof=AlgorithmSwitch.createSelfCorrcoefIterator(self._trait_block_ticks,src,self._trait_block_ticks)
             ave_window=max(int(self._trait_block_ticks*0.1),2) #検出用の平均フィルタは0.1*len(tone)//2だけずれてる。個々を直したらtbskmodem#TbskModulatorも直せ
             self._avefilter=AverageInterator[float](self._cof,ave_window)
             self._last_data=0

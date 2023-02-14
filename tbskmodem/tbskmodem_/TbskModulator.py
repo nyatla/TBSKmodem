@@ -1,32 +1,38 @@
-from itertools import chain
 from typing import overload
 
 from ..kokolink.types import Iterable,Iterator,Union
+from ..kokolink.utils.math import XorShiftRand31
 from ..kokolink.protocol.tbsk.tbskmodem import TbskModulator_impl
 from ..kokolink.protocol.tbsk.toneblock import TraitTone
 from ..kokolink.protocol.tbsk.preamble import Preamble
-from ..kokolink.streams import BitStream,RoStream,ByteStream
+from ..kokolink.streams import RoStream,ByteStream
 from ..kokolink.filter import BitsWidthFilter
 from ..kokolink.utils.functions import isinstances
+from ..kokolink.protocol.tbsk.preamble import CoffPreamble
 
 class TbskModulator(TbskModulator_impl):
-    def __init__(self,tone:TraitTone,preamble:Preamble=None):
-        """
-            Args:
-                tone
-                    特徴シンボルのパターンです。
-        """
-        super().__init__(tone,preamble)
-        
-    def modulateAsBit(self,src:Union[Iterable[int],Iterator[int]])->Iterator[float]:
-        ave_window_shift=max(int(len(self._tone)*0.1),2)//2 #検出用の平均フィルタは0.1*len(tone)//2だけずれてる。ここを直したらTraitBlockDecoderも直せ
+    @overload
+    def __init__(self,tone:TraitTone):
+        ...
+    @overload
+    def __init__(self,tone:TraitTone,preamble_cycle:int):
+        ...
+    @overload
+    def __init__(self,tone:TraitTone,preamble:Preamble):
+        ...
+    def __init__(self,*args,**kwds):
+        if isinstances(args,(TraitTone,)):
+            super().__init__(args[0],CoffPreamble(args[0]))
+        elif isinstances(args,(TraitTone,int)):
+            super().__init__(args[0],CoffPreamble(args[0],CoffPreamble.DEFAULT_TH,args[1]))
+        elif isinstances(args,(TraitTone,Preamble)):
+            super().__init__(args[0],args[1])
+        else:
+            raise ValueError()
+        tone=args[0]
+        self._suffix=[tone[i]*0.5 if i%2==0 else -tone[i]*0.5 for i in range(len(tone))]
 
-        return chain(
-            self._preamble.getPreamble(),
-            self._enc.setInput(self.DiffBitEncoder(0,BitStream(src,1))),
-            [0]*ave_window_shift    #demodulatorが平均値で補正してる関係で遅延分を足してる。
-        )
-    def modulateAsHexStr(self,src:Union[str,bytes]):
+    def modulateAsHexStr(self,src:Union[str,bytes],stopsymbol:bool=True):
         """ hex stringを変調します。
             hex stringは(0x)?[0-9a-fA-F]{2}形式の文字列です。
             hex stringはbytesに変換されて送信されます。
@@ -39,35 +45,47 @@ class TbskModulator(TbskModulator_impl):
         if sstr[:2]=="0x":
             sstr=sstr[2:]
             # print(sstr)
-        return self.modulate(bytes.fromhex(sstr))
+        return self.modulate(bytes.fromhex(sstr),stopsymbol=stopsymbol)
     @overload
-    def modulate(self,src:Iterable[int],bitwidth:int=8)->Iterator[float]:
+    def modulateAsBit(self,src:Iterable[int],stopsymbol:bool=True)->Iterator[float]:
         ...
     @overload
-    def modulate(self,src:Iterator[int],bitwidth:int=8)->Iterator[float]:
+    def modulateAsBit(self,src:Iterator[int],stopsymbol:bool=True)->Iterator[float]:
+        ...
+    def modulateAsBit(self,*args,**kwds)->Iterator[float]:
+        suffix=None if "stopsymbol" in kwds and kwds["stopsymbol"]==False else self._suffix
+
+        if isinstances(args,(Iterator,),(kwds,{"stopsymbol":bool})):
+            return super().modulateAsBit(RoStream[int](args[0]),suffix=suffix)
+        elif isinstances(args,(Iterable,),(kwds,{"stopsymbol":bool})):
+            return super().modulateAsBit(RoStream[int](args[0]),suffix=suffix)
+
+
+    @overload
+    def modulate(self,src:Iterable[int],bitwidth:int=8,stopsymbol:bool=True)->Iterator[float]:
         ...
     @overload
-    def modulate(self,src:bytes)->Iterator[float]:
+    def modulate(self,src:Iterator[int],bitwidth:int=8,stopsymbol:bool=True)->Iterator[float]:
         ...
     @overload
-    def modulate(self,src:str,encoding="utf-8")->Iterator[float]:
+    def modulate(self,src:bytes,stopsymbol:bool=True)->Iterator[float]:
+        ...
+    @overload
+    def modulate(self,src:str,encoding="utf-8",stopsymbol:bool=True)->Iterator[float]:
         ...
     def modulate(self,*args,**kwds)->Iterator[float]:
-        def __modulate_A(src:Iterator[int],bitwidth:int=8)->Iterator[float]:
-            return self.modulateAsBit(BitsWidthFilter(bitwidth).setInput(RoStream[int](src)))
-        def __modulate_B(src:Iterable[int],bitwidth:int=8)->Iterator[float]:
-            return self.modulateAsBit(BitsWidthFilter(bitwidth).setInput(RoStream[int](src)))
-        def __modulate_C(src:bytes)->Iterator[float]:
-            return self.modulateAsBit(BitsWidthFilter(8).setInput(ByteStream(src)))
-        def __modulate_D(src:str,encoding:str="utf-8")->Iterator[float]:
-            return self.modulateAsBit(BitsWidthFilter(8).setInput(ByteStream(src,encoding=encoding)))
-        if isinstances(args,(Iterator,),(kwds,{"bitwidth":int})):
-            return __modulate_A(*args,**kwds)
-        elif isinstances(args,(bytes,)):
-            return __modulate_C(*args,**kwds)
-        elif isinstances(args,(str,),(kwds,{"encoding":str})):
-            return __modulate_D(*args,**kwds)
-        elif isinstances(args,(Iterable,),(kwds,{"bitwidth":int})):
-            return __modulate_B(*args,**kwds)
+        suffix=None if "stopsymbol" in kwds and kwds["stopsymbol"]==False else self._suffix
+
+        if isinstances(args,(Iterator,),(kwds,{"bitwidth":int,"stopsymbol":bool})):
+            bitwidth=8 if "bitwidth" not in kwds else kwds["bitwidth"]
+            return super().modulateAsBit(BitsWidthFilter(bitwidth).setInput(RoStream[int](args[0])),suffix=suffix)
+        elif isinstances(args,(bytes,),(kwds,{"stopsymbol":bool})):
+            return super().modulateAsBit(BitsWidthFilter(8).setInput(ByteStream(args[0])),suffix=suffix)
+        elif isinstances(args,(str,),(kwds,{"encoding":str,"stopsymbol":bool})):
+            encoding="utf-8" if "encoding" not in kwds else kwds["encoding"]
+            return super().modulateAsBit(BitsWidthFilter(8).setInput(ByteStream(args[0],encoding=encoding)),suffix=suffix)
+        elif isinstances(args,(Iterable,),(kwds,{"bitwidth":int,"stopsymbol":bool})):
+            bitwidth=8 if "bitwidth" not in kwds else kwds["bitwidth"]
+            return super().modulateAsBit(BitsWidthFilter(bitwidth).setInput(RoStream[int](args[0])),suffix=suffix)
         else:
-            raise TypeError()
+            raise ValueError()
