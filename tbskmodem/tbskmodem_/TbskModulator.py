@@ -53,6 +53,8 @@ class TbskModulator(TbskModulator_impl):
     def modulateAsBit(self,src:Iterator[int],stopsymbol:bool=True)->Iterator[float]:
         ...
     def modulateAsBit(self,*args,**kwds)->Iterator[float]:
+
+        #stopsymbolが明示的にfalseの時だけ無効。
         suffix=None if "stopsymbol" in kwds and kwds["stopsymbol"]==False else self._suffix
 
         if isinstances(args,(Iterator,),(kwds,{"stopsymbol":bool})):

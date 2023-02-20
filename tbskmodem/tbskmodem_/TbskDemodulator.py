@@ -37,7 +37,7 @@ class TbskDemodulator(TbskDemodulator_impl):
     def __init__(self,tone:TraitTone):
         ...
     @overload
-    def __init__(self,tone:TraitTone,preamble_th:float,preamble_cycle:int):
+    def __init__(self,tone:TraitTone,preamble_th:float=CoffPreamble.DEFAULT_TH,preamble_cycle:int=CoffPreamble.DEFAULT_CYCLE):
         ...
     @overload
     def __init__(self,tone:TraitTone,preamble:Preamble):
@@ -46,7 +46,6 @@ class TbskDemodulator(TbskDemodulator_impl):
         if isinstances(args,(TraitTone,)):
             super().__init__(args[0],CoffPreamble(args[0]))
         elif isinstances(args,(TraitTone,float,int)):
-            print("YES")
             super().__init__(args[0],CoffPreamble(args[0],args[1],args[2]))
         elif isinstances(args,(TraitTone,Preamble)):
             super().__init__(args[0],args[1])
