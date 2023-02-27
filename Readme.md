@@ -21,7 +21,7 @@ Pythonプラットフォーム以外にも、メジャーな言語向けの実�
 - [TBSKmodem for JavaScript](https://github.com/nyatla/TBSKmodemJS)
 - [TBSKmodem for Java](https://github.com/nyatla/TBSKmodemJava)
 - [TBSKmodem for Processing](https://github.com/nyatla/TBSKmodem-for-Processing)
-- [TBSKmodem for MicroChip](https://github.com/nyatla/https://github.com/nyatla/TBSKmodemMicro)
+- [TBSKmodem for MicroChip](https://github.com/nyatla/TBSKmodemMicro)
 
 
 ## 性能
