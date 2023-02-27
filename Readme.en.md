@@ -12,6 +12,16 @@ There is a library for development and a console script [tbskmodem](tbskmodem.md
 
 See [Youtube](https://www.youtube.com/watch?v=4cB3hWATDUQ) with modulated sound.🎵
 
+## For other platforms.
+- TBSKmodem for Python
+- [TBSKmodem for C#](https://github.com/nyatla/TBSKmodemCS)
+- [TBSKmodem for C++](https://github.com/nyatla/TBSKmodemCpp)
+- [TBSKmodem for JavaScript](https://github.com/nyatla/TBSKmodemJS)
+- [TBSKmodem for Java](https://github.com/nyatla/TBSKmodemJava)
+- [TBSKmodem for Processing](https://github.com/nyatla/TBSKmodem-for-Processing)
+- [TBSKmodem for MicroChip](https://github.com/nyatla/TBSKmodemMicro)
+
+
 
 ## Performance
 
