@@ -153,7 +153,7 @@ class CoffPreamble(Preamble):
                         # [next(cof) for _ in range(symbol_ticks//4)]
                         #バッファリングしておいた相関値に3値平均フィルタ
                         buf=cof.buf[-symbol_ticks:]
-                        b=[(i+self._nor-symbol_ticks+1,buf[i]+buf[i+1]+buf[2]) for i in range(len(buf)-2)] #位置,相関値
+                        b=[(i+self._nor-symbol_ticks+1,buf[i]+buf[i+1]+buf[i+2]) for i in range(len(buf)-2)] #位置,相関値
                         b.sort(key=lambda x: x[1],reverse=True)
                         #ピークを基準に詳しく様子を見る。
                         peak_pos=b[0][0]
