@@ -1,6 +1,6 @@
 from typing import overload,TypeVar,Generic
 
-from ..types import List,Iterable,Tuple
+from ..types import List,Iterable,Iterator
 T=TypeVar("T")
 class RingBuffer(Generic[T]):
     """ スライス可能なリングバッファ。
@@ -25,29 +25,27 @@ class RingBuffer(Generic[T]):
     def extend(self,v:Iterable[T]):
         for i in v:
             self.append(i)
-    def sublist(self,pos:int,size:int)->Tuple[int,...]:
-        """ リストの一部を切り取って返します。
-            この関数はバッファの再配置を行いません。
+    
+    class SubIter(Iterator[T]):
+        def __init__(self,buf,pos,size):
+            assert(size<len(buf))
+            self._size=size
+            self._pos=pos
+            self._buf=buf
+        def __next__(self):
+            if self._size<1:
+                raise StopIteration()
+            self._size=self._size-1
+            p=self._pos
+            self._pos=(self._pos+1)%len(self._buf)
+            return self._buf[p]
+
+    def subIter(self,pos:int,size:int)->Iterator[int]:
+        """ 現在のpos位置からsize個の要素を返すイテレータを生成して返します。
+            返却値はバッファを直接参照します。内容が変更された場合、イテレータの返却値は影響を受けます。
+            内容変更の可能性がある関数は、__getitem__,append,extendです。
         """
-        l:int=len(self._buf)
-        if pos>=0:
-            p:int=self._p+pos
-            if size>=0:
-                assert(pos+size<=l)
-                return tuple([self._buf[(p+i)%l] for i in range(size)])
-            else:
-                assert(pos+size+1>=0)
-                return tuple([self._buf[(p+size+i+1)%l] for i in range(-size)])
-        else:
-            p:int=self._p+l+pos
-            if size>=0:
-                assert(l+pos+size<=l)
-                return tuple([self._buf[(p+i)%l] for i in range(size)])
-            else:
-                assert(l+pos+size+1>=0)
-                return tuple([self._buf[(p-i+l)%l] for i in range(-size)])
-
-
+        return self.SubIter(self._buf,(pos+self._p)%len(self._buf),size)
 
     @property
     def tail(self)->T:
@@ -63,7 +61,7 @@ class RingBuffer(Generic[T]):
 
     def __getitem__(self,s)->List[T]:
         """ 通常のリストにして返します。
-            必要に応じて再配置します。再配置せずに取り出す場合はsublistを使用します。
+            必要に応じて再配置します。再配置せずに取り出す場合はsubIterを使用します。
         """
         b=self._buf
         if self._p!=0:
