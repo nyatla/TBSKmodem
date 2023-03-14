@@ -1,6 +1,6 @@
 # TBSK modem
 
-English document 👉[Readme.en.md](Readme.en.md)
+English document 👉[Readme.md](Readme.md)
 
 TBSK (Trait Block Shift Keying) modemは、FFT/IFTTを使わない、低速、短距離の音響通信の実装です。
 バイト/ビットストリームの振幅信号への変調、振幅信号からバイト/ビットストリームへの復調ができます。
