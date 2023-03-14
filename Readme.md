@@ -1,20 +1,18 @@
 # TBSK modem
 
-English document 👉[Readme.en.md](Readme.en.md)
+Japanese document 👉[Readme.md](Readme.md)
 
-TBSK (Trait Block Shift Keying) modemは、FFT/IFTTを使わない、低速、短距離の音響通信の実装です。
-バイト/ビットストリームの振幅信号への変調、振幅信号からバイト/ビットストリームへの復調ができます。
+TBSK (Trait Block Shift Keying) modem is a low-speed, short-range audio communication implementation without FFT/IFTT.
 
-Pythonプラットフォーム向けには、開発用のライブラリとコンソールアプリ[tbskmodem](tbskmodem.md)があります。
+It can modulate a byte/bitstream to PCM  and demodulate PCM to a byte/bitstream.
+
+There is a library for development and a console script [tbskmodem](tbskmodem.md).
 
 ![preview_tbsk](https://user-images.githubusercontent.com/2483108/194768184-cecddff0-1fa4-4df8-af3f-f16ed4ef1718.gif)
 
-[Youtube](https://www.youtube.com/watch?v=4cB3hWATDUQ)でみる（信号音付きです。）
+See [Youtube](https://www.youtube.com/watch?v=4cB3hWATDUQ) with modulated sound.🎵
 
-## 対応プラットフォーム
-
-Pythonプラットフォーム以外にも、メジャーな言語向けの実装があります。
-
+## For other platforms.
 - TBSKmodem for Python
 - [TBSKmodem for C#](https://github.com/nyatla/TBSKmodemCS)
 - [TBSKmodem for C++](https://github.com/nyatla/TBSKmodemCpp)
@@ -24,115 +22,110 @@ Pythonプラットフォーム以外にも、メジャーな言語向けの実�
 - [TBSKmodem for MicroChip](https://github.com/nyatla/TBSKmodemMicro)
 
 
-## 性能
 
-静かな室内での音響通信性能は、ビットレートが5bps～1kbps、通信距離は1mくらいです。
-パソコンに備わるマイクとスピーカーで通信ができます。
+## Performance
 
-その他の媒体でも、それなりに波形を伝送できれば通信できると思います。
+Throughput in a quiet room is 5 bps to 1 kbps and transmit distance is about 1 meter.
+It is possible with the microphone and speakers provided in a personal computer.
 
 
-## 仕様
+## Specification
 
-| パラメータ | 値 |
+| Parameters |  |
 | --- | --- |
-| 変調方式 | 特徴ブロック差動変調 |
-| ビットレート | 5～1kbps |
-| 搬送波周波数 | 任意 |
-| 帯域幅 | 5Hz～全帯域 |
-| エラー訂正/検出 | なし |
+| Modulation method | Trait block differential modulation |
+| Bit rate | 5 - 1kbps |
+| Carrier frequency | Any |
+| Bandwidths | 5Hz -  |
+| Error correction/detection | No |
 
-### 特徴ブロック差動変調
+### Trait block differential modulation
 
-TBSKの特徴ブロック差動変調は、波形シンボルの代わりに任意形状のトーン信号とその反転値を、2値の伝送シンボルとして使います。
-トーン信号はスペクトラム拡散したSin波を使いますが、他にも任意形状の波形を使うことができます。
-復調は、隣接するシンボルの相関値を遅延検波します。相関値は1,-1を取るので、これをビットに復調します。
+Trait block differential modulation uses an any shaped tone signal and its inverted value as a binary transmission symbol instead of a waveform symbol.
+The tone signal is a spread-spectrum Sin wave, but other shaped waveforms can be used.
+Demodulation is performed by delay detection of the correlation rate of adjacent symbols. The correlation rate indicates  1,-1, which is demodulated into bits.
 
-この伝送方式のパラメータは、トーン信号長(Tick数×搬送波周波数)のみです。トーン信号長だけ適合していれば、同一な復調器で信号の形式によらず復調することができます。
+This modulatlation method has the only one parameter that is tone signal length (number of ticks x carrier frequency). The demodulator can demodulate any type of signal as long as the tone signal length is compatible.
 
-### 信号同期
+### Signal Synchronization
 
-信号の検出は相関値を一定時間観測して判定します。信号の先端には通常のシンボルよりも長い同期パターンを配置します。
-初期の同期シンボル検知のほか、同期ずれを補正するためにシンボル反転時の相関ピークを検出します。
-搬送波の安定しないシステムでシンボル1の信号を長時間を送ると、同期が取れずにストリームが中断します。
-長時間の通信では、数十秒に一度は0のシンボルを連続して送信されるようにデータを加工してください。
+First signal detection is determined by observing the correlation value for a certain period of time. A first synchronization pattern longer than a normal symbol, it is placed at the head of the signal.
+And to maintain the state of synchronization, demodulator  uses the edge of the symbol in the signal  to detect the peak of the correlation.
 
-### トーン信号
+If a signal is sent with symbols not inverted for a long time in an unstable carrier wave system, the transaction will be interrupted by lack of synchronization.
+Should be good to process the data to be transmitted so that the data is inverted once every few seconds.
 
-標準のトーン信号は、Sin波をPN符号で位相シフトしたスペクトラム拡散波形です。
-トーン信号は復調側でS/N比が高くなる形状であれば何でも構いません。トーン信号にサイン波を使用すると、DPSK変調と同じ動作をします。
+### Tone Signal
 
-### 外乱耐性
+Default tone signal is a spread spectrum waveform with a sine wave phase-shifted by a PN code.
+The tone signal can be any shape that is a high signal-to-noise ratio on the demodulation side. If the tone signal is sine, it behaves the same as DPSK modulation.
 
-トーン信号が長いほど外乱耐性は強くなりますが、トーン信号が長くなるほどビットレートは低下します。
-搬送波周波数に対する最大通信レートの理論値は1bit/Hzです。実際には0.01bit/Hzが目安となります。
+### Disturbance Tolerance
 
-トーン信号は、線路媒体の特性に合わせて、時間方向、周波数方向に拡散（帯域の無駄遣い）ができます。
+Disturbance tolerance becomes stronger the longer the tone signal, but lower the bit rate if longer the tone signal, 
+The communication rate relative to the carrier frequency is 0.01 bit/Hz is the realstic.
 
 
-### パケット仕様
-現状のプロトコルは、開始点検出とそれに続くペイロード読出しのみを実装しています。パケットサイズや終端識別子、エラー訂正、検出についてはアプリケーションで実装してください。
+### Packet format
+The current protocol only implements signal detection and followed payload reading. Applications should implement packet size, termination identifier, error correction, and detection.
 
-## ライセンス
+## License
 
-本ソフトウェアは、MITライセンスで提供します。ホビー・研究用途では、MITライセンスに従って適切に運用してください。
-産業用途では、特許の取り扱いに注意してください。
+This software is provided under the MIT license. For hobby and research purposes, use it according to the MIT license.
 
-このライブラリはMITライセンスのオープンソースソフトウェアですが、特許フリーではありません。
+For industrial applications, be careful with patents.
 
-特許権については、YAMAHA CORPORATION様の所有する以下の特許、及び派生元特許周辺に類似する箇所がある様に思われます。
-専門家の監修は受けておりませんので、詳細はご自身でお調べください。
+This library is MIT licensed open source software, but not patent free.
 
-[特許情報プラットフォーム](https://www.j-platpat.inpit.go.jp/)
+Regarding patent rights, it seems that some of the rights owned by YAMAHA CORPORATION.
+It is not supervised by experts, so check the details yourself.
 
-[変調装置及び復調装置 WO-A-2010/016589](https://www.j-platpat.inpit.go.jp/c1800/PU/WO-A-2010-016589/7847773A7250230D1C8D66BBF506D4E794BEF7F38B5DF2B8C11BE9225DF7BB10/50/ja)
+[j-platpat](https://www.j-platpat.inpit.go.jp/)
+
+[MODULATION DEVICE AND DEMODULATION DEVICE WO-A-2010/016589](https://www.j-platpat.inpit.go.jp/c1800/PU/WO-A-2010-016589/7847773A7250230D1C8D66BBF506D4E794BEF7F38B5DF2B8C11BE9225DF7BB10/50/ja)
+
 
 
 ## GetStarted
 
-Anacondaの利用を前提として説明します。Pythonのバージョンは、Python 3.10.xを推奨します。
+The explanation assumes the Anaconda environment.
+Python 3.10.x is recommended.
 
-セットアップが成功すると、コマンドラインツールの[tbskmodem](./tbskmodem.md)も同時にインストールされます。
+The command line tool [tbskmodem](./tbskmodem.md) will be installed at the same time.
 
-
-#### Anacondaでのセットアップ
-ソースコードをgithubからcloneします。
+#### Setup for Anaconda
+Clone the sorce code from github.
 
 ```
 >git clone https://github.com/nyatla/TBSKmodem.git
 ```
 
-step4までは外部モジュールは不要です。
+Until step4, no external module is required .
+If you go beyond step4, install numpy and sounddevice.
+It is required for sound playback and capture.
 
-step4より先に進むならば、numpy,sounddeviceをインストールしてください。
-サウンドの再生やキャプチャに必要です。
 ```
 >conda install -c anaconda numpy
 >conda install -c conda-forge python-sounddevice
 ```
-
-#### pipからのセットアップ
-
-Linux環境のpipでセットアップする場合はportaudioも必要になります。
+#### Setup by pip
 
 ```
-$sudo apt-get install portaudio19-dev
 $pip install tbskmodem
+$sudo apt-get install portaudio19-dev
 ```
-portaudioをセットアップできればWindows下でも利用できるはずです。
 
+TBSKmodem requires portaudio library.
 
+### Location of sample scripts
 
-
-### サンプルプログラムの場所
-
-サンプルプログラムはTBSKmodem/getstartedディレクトリにあります。
+Sample programs are in the TBSKmodem/getstarted directory.
 ```
 > cd getstarted
 ```
 
-#### step1. データをwaveファイルに変換
-step1.modulate.pyは、ビット値を変調することができます。
+#### step1. Modulate to wave file.
+step1.modulate.py moduletes bits to wave file.
 
 ```
 > python step1_modulate.py
@@ -140,13 +133,12 @@ Imported local library.
 [WARN] Imported local library.
 >
 ```
-このスクリプトは変調した振幅信号をwavファイルに保存します。
-出力ファイル名は、step1.wavです。
+This script modulates bits and save result to step1.wav.
 
-`[WARN] Imported local library.`と表示されましたか？心配は不要です。
-この表示は、ライブラリではなく、ローカルディレクトリにあるtbskmodemパッケージをリンクした時に表示されるメッセージです。
+`[WARN] Imported local library.` is displayed? Do not warry, This means library is linked from local diractory, not python package.
 
-メイン関数を見てみましょう。
+
+See main function.
 ```
 def main():
     tone=TbskTone.createXPskSin(10,10).mul(0.5)    # SSFM DPSK
@@ -162,24 +154,25 @@ def main():
         PcmData.dump(PcmData(src_pcm,16,carrier),fp)
 ```
 
-このスクリプトは、まず伝送シンボルに相当するTraitToneオブジェクトを生成します。
-次に、変調器のTbskModulatorオブジェクトを生成して、modulateAsBit関数で変調します。
-変調するのはビット値(1 or 0)の配列で、合計8*16=128ビットです。
+First, this script creates TraitTone objects that use to transmission symbols.
+Next, create a modulator TbskModulator object and modulate it with the modulateAsBit function.
+Modulating source is an array of bit values (1 or 0), totaling 8*16=128 bits.
 
-modulateAsBit関数の戻り値は、変調した振幅値(float)を返すイテレータです。これをリストにして、最後にWaveファイルにして保存します。
+The return value of the modulateAsBit function is an iterator that return the modulated amplitude values (float). Make list from it  and save it as a Wave file at the end.
 
-#### step2. wavファイルから復調
+#### step2. Demodulate from wav file.
 
-step2.modulate.pyは、作成したwavファイルを元のビット列に戻します。
+step2.modulate.py demodulates wav file to bits.
+
 ```
 > python step2_demodulate.py
 [WARN] Imported local library.
 [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1]
 >
 ```
-当然のように、元のビット列に戻るはずです。
+It is decodes to the original bits.
 
-メイン関数を見てみましょう。
+See main function.
 ```
 def main():
     wav=None
@@ -192,19 +185,21 @@ def main():
     ret=demod.demodulateAsBit(wav.dataAsFloat())
     print([i for i in ret] if ret is not None else None)
 ```
-信号を格納したWaveファイルはstep1で作成したstep1.wavです。これを読み出します。
-次にトーン信号を作り、そこから復調器のTbskDemodulatorを作り、demodulateAsBit関数で復調します。
 
-demodulateAsBit関数はビット列をintで返すイテレータです。これをリストにして表示します。
+First, open and read  step1.wav.
+Next, create a tone signal, create a TbskDemodulator demodulator  with it, demodulate it with the demodulateAsBit function.
 
+The demodulateAsBit function returns an iterator that returns bit strings as ints.
+Final, display this as a list.
 
-イテレータは信号が成立しなくなるまで値をビット値を返し続けます。(信号終端についての疑問はここでは一旦忘れます。)
+The iterator continues returning bit values until the signal is no longer true. 
+(Forget the question about signal termination for now.)
 
+#### step3. Modulate and demodulate byte data.
 
-#### step3. バイトデータの変調と復調
+Of course Functions for sending and receiving byte values are already exist.
+step3_bytedata.py performs modulation and demodulation of bytes values.
 
-バイト値を送受信する関数も当然実装済みです。
-step3_bytedata.pyは、bytes値の変調と復調を実行します。
 
 ```
 > python .\step3_bytedata.py
@@ -213,8 +208,7 @@ step3_bytedata.pyは、bytes値の変調と復調を実行します。
 > 
 ```
 
-メイン関数を見てみましょう。
-
+See main function.
 ```
 def main():
     tone=TbskTone.createXPskSin(10,10).mul(0.5)    # SSFM DPSK
@@ -236,15 +230,14 @@ def main():
     print([i for i in ret] if ret is not None else None)
 ```
 
-step1とstep2を合体したような構造です。
-mod.modulate関数に注目してください。ここで、payloadにbytesをそのまま渡しています。
-そして、demod.demodulateAsBytesにも注目してください。データを渡すと、Bytesにして返してくれそうな関数です。
+The structure seems to combines step1 and step2.
+Notice the mod.modulate function. This, it sets bytes to payload as is.
+Also notice demod.demodulateAsBytes. It is a function that seems to return it as Bytes.
 
-入力は連続するbytes値なのに戻り値が1byte単位のbytes型なのは不自然な気もしますが、そういうものです。
 
-#### step4. 文字列の変調と復調
+#### step4. Modulate and demodulate text.
 
-step4_text.pyは、文字列の変調と復調を実行します。
+step4_text.py modulates and demodulate text as UTF-8.
 
 ```
 > python .\step4_text.py    
@@ -252,12 +245,12 @@ step4_text.pyは、文字列の変調と復調を実行します。
 ['ア', 'ン', 'タ', 'ヤ', 'ル', 'ー', 'ニ', 'ャ']
 >
 ```
-メイン関数を見てみましょう。step3とほとんど変わりません。
 
+See main function.
 ```
 def main():
     tone=TbskTone.createXPskSin(10,10).mul(0.5)    # SSFM DPSK
-    payload="アンタヤルーニャ" # 8byte
+    payload="アンタヤルーニャ"
     carrier=8000
 
     #modulation
@@ -272,18 +265,22 @@ def main():
     ret=demod.demodulateAsStr(wav.dataAsFloat())
     print([i for i in ret] if ret is not None else None)
 ```
-変調部分はmod.modulateそのままです。
-関数呼び出しの変更点は、復調部分でdemodulateAsStr関数が使われているところです。
 
-変調器と復調器は、それぞれ、bit配列,文字列,Hex string,bytes,uint8配列を引数に取る関数があります。
-勘の良い読者の方は気が付いたかもしれませんが、Hex stringはブロックチェーンネットワークのトランザクションを送信するための機能です。🧱⛓
+Modulation part is mod.modulate as it is.
+The changes is the demodulateAsStr function call in the demodulation part.
+
+The modulator and demodulator each have override functions that take bit arrays, strings, hex strings, bytes, and uint8 arrays arguments.
+
+As an astute you may have noticed, hex strings are a function for sending transactions on blockchain networks.🧱⛓
 
 
-#### step5. マイク入力のテスト
 
-step5_microphone.pyで、サウンドデバイスがpythonからアクセスできるかテストしましょう。
+#### step5. Testing microphone
 
-注意:WSL、VirtualBoxなどの仮想システムでは、サウンドデバイスにノイズが混じるため、通信が成立しないことがあります。
+For receiving signal needs microphone device.
+Check the sound device is accessible from python with step5_microphone.py.
+
+Note: In virtual systems such as WSL, VirtualBox, etc., audio communication may not be established due to noise in the sound device.
 
 ```
 > python .\step5_microphone.py
@@ -293,25 +290,27 @@ Volume meter
 ###
 ```
 
-マイクに向かって一曲披露してください。選曲はお任せします。
-"#"で示されるバーグラフが動いていれば、pythonは正常にマイクを認識しています。
+Please sing a your best song selection into the microphone.
 
-うまく認識できない場合は次の事を試してください。
+If the bar graph indicated by "#" is moving, python recognizes the microphone normally.
 
-1. マイクがPCに接続されているか確認する。
-2. スクリプトのdevice_idパラメータを変更する(1,2,3...)
-3. 他のプログラムでマイクを認識しているか確認する。
-4. もっと大きな声で歌う。
+Do not working? This is troubleshoot.
 
-歌い終わったら、ENTERでプログラムを停止します。
+1. Check connection of microphone to your computer.
+2. Change device_id parametor to any value(1,2,3...)
+3. Check other programs can connect microphone on same PC.
+4. Sing louder 
+
+When finished singing, press ENTER to stop the program.
 
 
-#### step6. リアルタイム送受信
+#### step6. Realtime demodulation.
 
-仕上げに、step6_realtime_receive.pyでリアルタイムに信号を復調します。
-マイクの準備は宜しいですか？
+This is the final step. Demodulate the signal in real time with step6_realtime_receive.py.
+Are you ready for the microphone?
 
-注意:WSL、VirtualBoxなどの仮想システムでは、サウンドデバイスにノイズが混じるため、通信が成立しないことがあります。
+
+Note: In virtual systems such as WSL, VirtualBox, etc., audio communication may not be established due to noise in the sound device.
 
 ```
 > python .\step6_realtime_receive.py
@@ -324,29 +323,18 @@ End of signal.
 >
 ```
 
-実行したディレクトリに、step6.wavが生成されています。
-このWaveファイルをpythonに聞かせてください。
-復調した文字列が表示されます。
+step6.wav is generated in the executed directory.
+Let make listen to this wave file to python.
+A demodulated string is displayed.
 
-ところで、受信した信号の終端はどこなのか？という疑問が残されたままです。
-TBSKでは、信号を検知した後、信号強度が閾値を超えていれば、それが何であっても延々と値を復調し続けます。
-上位の通信仕様でパケット長を固定したり、長さパラメータを初めに送信するなどして対処してください。
+By the way, The question remains. Where is the termination of the received signal? 
 
-
-チュートリアルはここまでです。[アンタヤルーニャ](http://wiki.ffo.jp/html/2682.html)
+In TBSK, after detecting a signal, it endlessly demodulates whatever the signal strength is above the threshold.
+Fix the packet length in the upper communication specification or send the length parameter first.
 
 
-
+Congratulations! You are now a TBSK Master! [アンタヤルーニャ](http://wiki.ffo.jp/html/2682.html)
 
 
 
-## 👈To Be Continued ▲▼▲
-
-さて、来週(来年)の目標は、
-
-1. Unityで動かしてみよう。
-2. ブラウザでも動かしてみよう。
-3. ペイロードの秘匿化とエラー訂正
-
-の３本です。
 
