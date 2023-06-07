@@ -24,7 +24,7 @@ class TbskModulator(TbskModulator_impl):
         if isinstances(args,(TraitTone,)):
             super().__init__(args[0],CoffPreamble(args[0]))
         elif isinstances(args,(TraitTone,int)):
-            super().__init__(args[0],CoffPreamble(args[0],CoffPreamble.DEFAULT_TH,args[1]))
+            super().__init__(args[0],CoffPreamble(args[0],args[1]))
         elif isinstances(args,(TraitTone,Preamble)):
             super().__init__(args[0],args[1])
         else:

@@ -158,9 +158,8 @@ class TbskDemodulator_impl:
 
             if self._co_step==3:
                 try:
-                    print(">>",self._peak_offset,self._stream.pos)
                     self._stream.seek(self._tone_ticks+self._peak_offset) #同期シンボル末尾に移動
-                    # print(">>",stream.pos)
+                    print(">>",self._peak_offset,self._stream.pos)
                     tbd=TraitBlockDecoder(self._tone_ticks)
                     self._result=self._builder(tbd.setInput(self._stream))
                     self.close()

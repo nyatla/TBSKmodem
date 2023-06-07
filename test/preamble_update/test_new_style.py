@@ -20,7 +20,7 @@ from tbskmodem.kokolink.utils.recoverable import SkipRecoverIteraor,RecoverableE
 
 class NoneSplitIterator(IRecoverableIterator[float]):
     def __init__(self,src):
-        self._src=iter(src)
+        self._src=src
         self._n=0
     def __next__(self):
         self._n+=1
@@ -48,7 +48,8 @@ demod=TbskDemodulator_impl(tone)
 
 ret=None
 try:
-    ret=demod.demodulateAsBit(NoneSplitIterator(src))
+    ret=demod.demodulateAsBit(NoneSplitIterator(iter(src)))
+    # ret=demod.demodulateAsBit(iter(src))
 except RecoverableException as e:
     # print("recover root")
     recover:TbskDemodulator_impl.AsyncDemodulate[int]=e.detach()

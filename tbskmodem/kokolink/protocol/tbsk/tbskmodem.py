@@ -11,7 +11,7 @@ from ...streams import BitStream,RoStream
 
 
 from .toneblock import TraitTone
-from .preamble import Preamble,CoffPreamble
+from .preamble import Preamble,CoffPreamble,CoffPreambleDetector
 
 
 
@@ -97,54 +97,41 @@ class TbskModulator_impl:
 
 DSTTYPE=TypeVar("DSTTYPE")
 class TbskDemodulator_impl:
+    DEFAULT_TH=CoffPreambleDetector.DEFAULT_TH
     class AsyncDemodulate(AsyncMethod[IRecoverableIterator[DSTTYPE]],Generic[DSTTYPE]):
-        def __init__(self,parent:"TbskDemodulator",src:Union[IRoStream[float],Iterable[float],Iterator[float]],builder:Callable[[TraitBlockDecoder],IRecoverableIterator[DSTTYPE]]):
+        def __init__(self,preamble:Preamble,src:Union[IRoStream[float],Iterable[float],Iterator[float]],builder:Callable[[TraitBlockDecoder],IRecoverableIterator[DSTTYPE]],threshold:float):
             super().__init__()
-            self._tone_ticks=len(parent._tone)
+            self._tone_ticks=preamble.ticks
             self._result:IRecoverableIterator[DSTTYPE]=None
             self._stream=src if isinstance(src,IRoStream) else RoStream(src)
             self._peak_offset:int=None
-            self._parent=parent
-            self._wsrex:AsyncMethod[IRecoverableIterator[DSTTYPE]]=None
             self._co_step=0
             self._builder:Callable[[TraitBlockDecoder],IRecoverableIterator[DSTTYPE]]=builder
             self._closed=False
+            self._detector=CoffPreambleDetector(self._stream,preamble,threshold=threshold)
         @property
         def result(self)->IRecoverableIterator[DSTTYPE]:
             assert(self._co_step>=4)
             return self._result            
         def close(self):
             if not self._closed:
-                try:
-                    if self._wsrex is not None:
-                        self._wsrex.close()
-                finally:
-                    self._wsrex=None
-                    self._parent._asmethod_lock=False
-                    self._closed=True
+                self._closed=True
         def run(self)->bool:
             assert(not self._closed)
             # print("run",self._co_step)
             if self._co_step==0:
                 try:
-                    self._peak_offset=self._parent._pa_detector.waitForSymbol(self._stream) #現在地から同期ポイントまでの相対位置
-                    assert(self._wsrex is None)
+                    self._peak_offset=next(self._detector) #現在地から同期ポイントまでの相対位置
+                    # self._peak_offset=self._parent._pa_detector.waitForSymbol(self._stream) #現在地から同期ポイントまでの相対位置
                     self._co_step=2
-                except RecoverableException as rexp:
-                    self._wsrex=rexp.detach()
-                    self._co_step=1
+                except RecoverableStopIteration:
+                    # self._co_step=0
                     return False
-
-
-
-            if self._co_step==1:
-                if self._wsrex.run()== False:
-                    return False
-                else:
-                    self._peak_offset = self._wsrex.result
-                    self._wsrex = None
-                    self._co_step = 2
-
+                except StopIteration:
+                    self._result=None
+                    self.close()
+                    self._co_step=4
+                    return True
             if self._co_step==2:
                 if self._peak_offset is None:
                     self._result=None
@@ -153,12 +140,10 @@ class TbskDemodulator_impl:
                     return True
                 # print(self._peak_offset)
                 self._co_step=3
-
             if self._co_step==3:
                 try:
-                    # print(">>",self._peak_offset+self._stream.pos)
                     self._stream.seek(self._tone_ticks+self._peak_offset) #同期シンボル末尾に移動
-                    # print(">>",stream.pos)
+                    # print(">>",self._peak_offset,self._stream.pos)
                     tbd=TraitBlockDecoder(self._tone_ticks)
                     self._result=self._builder(tbd.setInput(self._stream))
                     self.close()
@@ -176,20 +161,26 @@ class TbskDemodulator_impl:
 
 
     def __init__(self,tone:TraitTone,preamble:Preamble=None):
+        if preamble is None:
+            preamble=CoffPreamble(tone)
         self._tone=tone
-        self._pa_detector=preamble if preamble is not None else CoffPreamble(tone,threshold=1.0)
-        self._asmethod_lock:bool=False
+        self._preamble=preamble
+        self._asmethod=None #Pythonでは解放手順を持たない.
 
-    def demodulateAsBit(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[int]:
+    def demodulateAsBit(self,src:Union[Iterator[float],Iterator[float]],threshold:float=DEFAULT_TH)->IRecoverableIterator[int]:
         """ TBSK信号からビットを復元します。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
             RecoverExceptionが搬送するクラスは、AsyncDemodulate[AsyncMethod[IRecoverableIterator[int]]です。
         """
-        assert(self._asmethod_lock==False)
-        asmethod=self.AsyncDemodulate[int](self,src,lambda s:s)
+        if self._asmethod is not None:
+            #非同期メソッドが実行中か調べる
+            if not self._asmethod._closed:
+                raise Exception("Async method is not closed.")
+            else:
+                self._asmethod=None
+        asmethod=self.AsyncDemodulate[int](self._preamble,src,lambda s:s,threshold=threshold)
         if asmethod.run():
             return asmethod.result
         else:
-            self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
-            raise RecoverableException(asmethod) 
-
+            self._asmethod=asmethod
+            raise RecoverableException(asmethod)

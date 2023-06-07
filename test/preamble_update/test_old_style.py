@@ -52,8 +52,8 @@ demod=TbskDemodulator_impl(tone)
 
 ret=None
 try:
-    # ret=demod.demodulateAsBit(NoneSplitIterator(iter(src)))
-    ret=demod.demodulateAsBit(iter(src))
+    ret=demod.demodulateAsBit(NoneSplitIterator(iter(src)))
+    # ret=demod.demodulateAsBit(iter(src))
 except RecoverableException as e:
     # print("recover root")
     recover:TbskDemodulator_impl.AsyncDemodulate[int]=e.detach()

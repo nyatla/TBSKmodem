@@ -52,64 +52,71 @@ class TbskDemodulator(TbskDemodulator_impl):
         else:
             raise ValueError()
 
-    def demodulateAsBit(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[int]:
-        """ TBSK信号からビットを復元します。
-            関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
-            RecoverExceptionが搬送するクラスは、AsyncDemodulate[AsyncMethod[IRecoverableIterator[int]]です。
-        """
-        assert(self._asmethod_lock==False)
-        asmethod=self.AsyncDemodulate[int](self,src,lambda s:s)
-        if asmethod.run():
-            return asmethod.result
-        else:
-            self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
-            raise RecoverableException(asmethod) 
-    
-    def demodulateAsInt(self,src:Union[Iterator[float],Iterator[float]],bitwidth:int=8)->IRecoverableIterator[int]:
+    def demodulateAsInt(self,src:Union[Iterator[float],Iterator[float]],bitwidth:int=8,threshold:float=TbskDemodulator_impl.DEFAULT_TH)->IRecoverableIterator[int]:
         """ TBSK信号からnビットのint値配列を復元します。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
             RecoverExceptionが搬送するクラスは、AsyncDemodulate[AsyncMethod[IRecoverableIterator[int]]です。
         """
-        assert(self._asmethod_lock==False)
-        asmethod=self.AsyncDemodulate[int](self,src,lambda s:BitsWidthFilter(input_bits=1,output_bits=bitwidth).setInput(s))
+        if self._asmethod is not None:
+            #非同期メソッドが実行中か調べる
+            if not self._asmethod._closed:
+                raise Exception("Async method is not closed.")
+            else:
+                self._asmethod=None
+        asmethod=self.AsyncDemodulate[int](self,src,lambda s:BitsWidthFilter(input_bits=1,output_bits=bitwidth).setInput(s),threshold=threshold)
         if asmethod.run():
             return asmethod.result
         else:
             self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
             raise RecoverableException(asmethod) 
 
-    def demodulateAsBytes(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[bytes]:
+    def demodulateAsBytes(self,src:Union[Iterator[float],Iterator[float]],threshold:float=TbskDemodulator_impl.DEFAULT_TH)->IRecoverableIterator[bytes]:
         """ TBSK信号からnビットのint値配列を復元します。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
             RecoverExceptionが搬送するクラスは、AsyncDemodulate[AsyncMethod[IRecoverableIterator[int]]です。
         """
-        assert(self._asmethod_lock==False)
-        asmethod=self.AsyncDemodulate[int](self,src,lambda s:Bits2BytesFilter(input_bits=1).setInput(s))
+        if self._asmethod is not None:
+            #非同期メソッドが実行中か調べる
+            if not self._asmethod._closed:
+                raise Exception("Async method is not closed.")
+            else:
+                self._asmethod=None
+        asmethod=self.AsyncDemodulate[int](self,src,lambda s:Bits2BytesFilter(input_bits=1).setInput(s),threshold=threshold)
         if asmethod.run():
             return asmethod.result
         else:
             self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
             raise RecoverableException(asmethod) 
 
-    def demodulateAsStr(self,src:Union[Iterator[float],Iterator[float]],encoding:str="utf-8")->IRecoverableIterator[str]:
+    def demodulateAsStr(self,src:Union[Iterator[float],Iterator[float]],encoding:str="utf-8",threshold:float=TbskDemodulator_impl.DEFAULT_TH)->IRecoverableIterator[str]:
         """ TBSK信号からsize文字単位でstrを返します。
             途中でストリームが終端した場合、既に読みだしたビットは破棄されます。
             関数は信号を検知する迄制御を返しません。信号を検知せずにストリームが終了した場合はNoneを返します。
             RecoverExceptionが搬送するクラスは、AsyncDemodulate[AsyncMethod[IRecoverableIterator[str]]です。
         """
-        assert(self._asmethod_lock==False)
-        asmethod=self.AsyncDemodulate[str](self,src,lambda s:Bits2StrFilter(encoding=encoding).setInput(s))
+        if self._asmethod is not None:
+            #非同期メソッドが実行中か調べる
+            if not self._asmethod._closed:
+                raise Exception("Async method is not closed.")
+            else:
+                self._asmethod=None
+        asmethod=self.AsyncDemodulate[str](self,src,lambda s:Bits2StrFilter(encoding=encoding).setInput(s),threshold=threshold)
         if asmethod.run():
             return asmethod.result
         else:
             self._asmethod_lock=True #解放はAsyncDemodulateXのcloseで
             raise RecoverableException(asmethod) 
-    def demodulateAsHexStr(self,src:Union[Iterator[float],Iterator[float]])->IRecoverableIterator[str]:
+    def demodulateAsHexStr(self,src:Union[Iterator[float],Iterator[float]],threshold:float=TbskDemodulator_impl.DEFAULT_TH)->IRecoverableIterator[str]:
         """
             RecoverExceptionが搬送するクラスは、AsyncDemodulate[AsyncMethod[IRecoverableIterator[str]]です。
         """
-        assert(self._asmethod_lock==False)
-        asmethod=self.AsyncDemodulate[str](self,src,lambda s:Bits2HexStrFilter().setInput(s))
+        if self._asmethod is not None:
+            #非同期メソッドが実行中か調べる
+            if not self._asmethod._closed:
+                raise Exception("Async method is not closed.")
+            else:
+                self._asmethod=None
+        asmethod=self.AsyncDemodulate[str](self,src,lambda s:Bits2HexStrFilter().setInput(s),threshold=threshold)
         if asmethod.run():
             return asmethod.result
         else:

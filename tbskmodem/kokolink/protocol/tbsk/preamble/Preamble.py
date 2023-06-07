@@ -1,11 +1,13 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractproperty
 from ....interfaces import IRoStream
 
 
 class Preamble(ABC):
+    @abstractproperty
+    def ticks(self):
+        ...    
     @abstractmethod
     def getPreamble(self)->IRoStream[float]:
         ...
-    @abstractmethod
-    def waitForSymbol(self,src:IRoStream[float])->int:
-        ...
+
+

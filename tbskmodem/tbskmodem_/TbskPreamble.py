@@ -15,8 +15,8 @@ class TbskPreamble:
     @classmethod
     def createCoff(cls,*args,**kwds):
         if isinstances(args,(TraitTone,)):
-            return cls.createCoff(args[0],CoffPreamble.DEFAULT_TH, CoffPreamble.DEFAULT_CYCLE)
-        elif isinstances(args,(TraitTone,float,int)):
-           return CoffPreamble(args[0],args[1],args[2])
+            return cls.createCoff(args[0], CoffPreamble.DEFAULT_CYCLE)
+        elif isinstances(args,(TraitTone,int)):
+           return CoffPreamble(args[0],args[1])
         else:
             raise TypeError()
