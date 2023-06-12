@@ -43,180 +43,63 @@ class CoffPreamble(Preamble):
     def getPreamble(self)->IRoStream[float]:
         return self.PreambleBits(self._symbol,self._cycle)
 
-    # class waitForSymbolResultAsInt(int):
-    #     def __new__(cls,v:int):
-    #         r=super().__new__(cls,v)
-    #         return r
-    # class WaitForSymbolAS(AsyncMethod[Union[waitForSymbolResultAsInt,NoneType]]):
-    #     def __init__(self,parent:"CoffPreamble",src:IRoStream[float]):
-    #         super().__init__()
-    #         symbol_ticks=len(parent._symbol)
-    #         #後で見直すから10シンボル位記録しておく。
-    #         cofbuf_len=symbol_ticks*(6+parent._cycle*2)
-    #         # cofbuf_len=symbol_ticks*10
-    #         self._parent=parent
-    #         self._cof=BufferedIterator[float](AlgorithmSwitch.createSelfCorrcoefIterator(symbol_ticks,src,symbol_ticks),cofbuf_len,0)
-    #         self._avi=AverageInterator[float](self._cof,symbol_ticks)
-    #         sample_width=parent._cycle+1
-    #         # rb=RingBuffer(symbol_ticks*3,0)
-    #         self._sample_width=sample_width
-    #         self._cofbuf_len=cofbuf_len
-    #         self._symbol_ticks=symbol_ticks
-    #         self._rb=RingBuffer[float](symbol_ticks*sample_width,0)
-    #         self._gap=0 #gap
-    #         self._nor=0 #ストリームから読みだしたTick数
-    #         self._pmax:float
-    #         self._co_step=0
-    #         self._result=None
-    #         self._closed=False
-    #     @property
-    #     def result(self)->Union["CoffPreamble.waitForSymbolResultAsInt",NoneType]:
-    #         assert(self._co_step>=4)
-    #         return self._result           
-    #     def close(self):
-    #         if not self._closed:
-    #             self._parent._asmethtod_lock=False
-    #             self._closed=True
-    #     def run(self)->bool:
-    #         assert(not self._closed)
-    #         # print("wait",self._co_step)
-    #         #ローカル変数の生成
-    #         avi=self._avi
-    #         cof=self._cof
-    #         rb=self._rb
-    #         try:
-    #             while True:
-    #                 # ギャップ探索
-    #                 if self._co_step==0:
-    #                     self._gap=0
-    #                     self._co_step=1
-    #                 #ASync #1
-    #                 if self._co_step==1:
-    #                     while True:
-    #                         try:
-    #                             rb.append(next(avi))
-    #                             # print(rb.tail)
-    #                             self._nor=self._nor+1
-    #                             self._gap=rb.top-rb.tail
-    #                             if self._gap<0.5:
-    #                                 continue
-    #                             if rb.top<0.1:
-    #                                 continue
-    #                             if rb.tail>-0.1:
-    #                                 continue
-    #                             break
-    #                         except RecoverableStopIteration as e:
-    #                             return False
-    #                     self._co_step=2 #Co進行
-    #                 if self._co_step==2:
-    #                     # print(1,self._nor,rb.tail,rb.top,self._gap)
-    #                     # ギャップ最大化
-    #                     while True:
-    #                         try:
-    #                             rb.append(next(avi))
-    #                             self._nor=self._nor+1
-    #                             w=rb.top-rb.tail
-    #                             if w>=self._gap:
-    #                                 # print(w,self._gap)
-    #                                 self._gap=w
-    #                                 continue
-    #                             break
-    #                         except RecoverableStopIteration as e:
-    #                             return False
-    #                     # print(2,nor,rb.tail,rb.top,self._gap)
-    #                     if self._gap<self._parent._threshold:
-    #                         self._co_step=0 #コルーチンをリセット
-    #                         continue
-    #                     # print(3,nor,rb.tail,rb.top,self._gap)
-    #                     # print(2,nor,self._gap)
-    #                     self._pmax=rb.tail
-    #                     self._co_step=3
-    #                 if self._co_step==3:
-    #                     #同期シンボルピーク検出
-    #                     while True:
-    #                         try:
-    #                             n=next(avi)
-    #                             self._nor=self._nor+1
-    #                             if n>self._pmax:
-    #                                 self._pmax=n
-    #                                 continue
-    #                             if self._pmax>0.1:
-    #                                 break
-    #                         except RecoverableStopIteration as e:
-    #                             return False
-    #                     self._co_step=4 #END
-    #                     symbol_ticks=self._symbol_ticks
-    #                     sample_width=self._sample_width
-    #                     cofbuf_len=self._cofbuf_len
-    #                     cycle=self._parent._cycle
 
-    #                     # print(4,self._nor,rb.tail,rb.top,self._gap)
-    #                     # print(3,self._nor)
-    #                     # #ピーク周辺の読出し
-    #                     # [next(cof) for _ in range(symbol_ticks//4)]
-    #                     #バッファリングしておいた相関値に3値平均フィルタ
-    #                     buf=cof.buf[-symbol_ticks:]
-    #                     b=[(i+self._nor-symbol_ticks+1,buf[i]+buf[i+1]+buf[i+2]) for i in range(len(buf)-2)] #位置,相関値
-    #                     b.sort(key=lambda x: x[1],reverse=True)
-    #                     #ピークを基準に詳しく様子を見る。
-    #                     peak_pos=b[0][0]
-    #                     # print(peak_pos-symbol_ticks*3,(self._nor-(peak_pos+symbol_ticks*3)))
-    #                     #Lレベルシンボルの範囲を得る
-    #                     # s=peak_pos-symbol_ticks*3-(self._nor-cofbuf_len)
-    #                     s=peak_pos-symbol_ticks*sample_width-(self._nor-cofbuf_len)
-    #                     lw=cof.buf[s:s+cycle*symbol_ticks]
-    #                     lw.sort()
-    #                     #lw=lw[:len(lw)*3//2+1]#効いてないので一時的にコメントアウト
-    #                     if sum(lw)/len(lw)>lw[0]*0.66:
-    #                         # print("ERR(L",peak_pos+src.pos,sum(lw)/len(lw),min(lw))
-    #                         self._co_step=0#co_step0からやり直す。
-    #                         continue #バラツキ大きい
-    #                     #Hレベルシンボルの範囲を得る
-    #                     # s=peak_pos-symbol_ticks*6-(self._nor-cofbuf_len)
-    #                     s=peak_pos-symbol_ticks*sample_width*2-(self._nor-cofbuf_len)
-    #                     lh=cof.buf[s:s+cycle*symbol_ticks]
-    #                     lh.sort(reverse=True)
-    #                     #lh=lh[:len(lh)*3//2+1] 効いてないので一時的にコメントアウト
-    #                     if sum(lh)/len(lh)<lh[0]*0.66:
-    #                         # print("ERR(H",peak_pos+src.pos,sum(lh)/len(lh),max(lh))
-    #                         self._co_step=0 #co_step0からやり直す。
-    #                         continue #バラツキ大きい
-    #                     #値の高いのを抽出してピークとする。
-    #                     # print(peak_pos)
-    #                     self._result=CoffPreamble.waitForSymbolResultAsInt(peak_pos-self._nor)#現在値からの相対位置
-    #                     self.close()
-    #                     return True
-    #                 raise RuntimeError("Invalid co_step")
-    #         except StopIteration as e:
-    #             self._co_step=4 #END
-    #             self.close()
-    #             self._result=None
-    #             return True
-    #             # print("END")
-    #         except:
-    #             self._co_step=4 #END
-    #             self.close()
-    #             raise
 
-    # def waitForSymbol(self,src:IRoStream[float])->Union[waitForSymbolResultAsInt,NoneType]:
-    #     """ 尖形のピーク座標を返します。座標は[0:-1],[1:1],[2:1],[3:-1]の[2:1]の末尾に同期します。
-    #         値はマイナスの事もあります。
-    #         @raise
-    #             入力からRecoverableStopInterationを受信した場合、RecoverableExceptionを送出します。
-    #             呼び出し元がこの関数を処理しない限り,次の関数を呼び出すことはできません。
-    #             終端に到達した場合は、Noneを返します。
+
+class AveLog(RingBuffer):
+    """ 過去N個の平均値をM個記録します。
+    """
+    def __init__(self,nofave,nofbuf):
+        super().__init__(nofbuf,0) #記録
+        self._rb=RingBuffer[float](nofave,0) #平均値のためのキャッシュ
+        self._sum=0.
+    def append(self,v):
+        a=self._rb.top
+        self._rb.append(v)
+        self._sum=self._sum+v-a
+        super().append(self._sum/len(self._rb))
+
+
+class TickLog(RingBuffer):
+    """ 過去nofave個の平均値をnofbuf個記録します。
+    """
+    def __init__(self,nofbuf):
+        super().__init__(nofbuf,0)
+    def indexOfAve3Max(self,size_back):
+        """ 過去N個の中で最大の値とインデクスを探す.
+            探索範囲は,+1,n-1となる。
+            戻り値は[-(size_back-1),0]
+        """
+        assert(size_back>0)
+        buf=self._buf
+        buflen=len(buf)
+        # 探索開始位置 RBの後端からsize_back戻ったところ
+        siter=self.subIter(buflen-size_back,size_back)
+        a=[next(siter),next(siter),next(siter)]        
+        max_i=0
+        max_v=sum(a)
+        n=1
+        for i in siter:
+            s=sum(a)
+            if s>max_v:
+                max_i=n
+                max_v=s
+            a[n%3]=i
+            n=n+1
+        return max_i+1,max_v
+    # def max(self,pos,size):
+    #     """ 過去N個の中で最大の値とインデクスを探す.
+    #         探索範囲は,+1,n-1となる。
+    #         戻り値は[-(size_back-1),0]
     #     """
-
-    #     assert(self._asmethtod_lock==False)
-    #     asmethtod=self.WaitForSymbolAS(self,src)
-    #     if asmethtod.run():
-    #         return asmethtod.result
-    #     else:
-    #         #ロックする（解放はWaitForSymbolASのclose内で。）
-    #         self._asmethtod_lock=True
-    #         raise RecoverableException(asmethtod)
-
-
+    #     # 探索開始位置 RBの後端からsize_back戻ったところ
+    #     siter=self.subIter(pos,size)
+    #     max_v=next(siter)
+    #     for i in siter:
+    #         if i>max_v:
+    #             max_v=i
+    #     return max_v
+   
 
 
 class CoffPreambleDetector(PreambleDetector[CoffPreamble,"CoffPreambleDetector.DetectedPreamble"]):
@@ -232,10 +115,14 @@ class CoffPreambleDetector(PreambleDetector[CoffPreamble,"CoffPreambleDetector.D
         cofbuf_len=symbol_ticks*(6+cycle*2)
         self._cof=BufferedIterator[float](AlgorithmSwitch.createSelfCorrcoefIterator(symbol_ticks,self._src,symbol_ticks),cofbuf_len,0)
         self._avi=AverageInterator[float](self._cof,symbol_ticks)
+
+        self._average1=AveLog(symbol_ticks,symbol_ticks*sample_width)     #シンボル単位の平均値
+        self._tickbuf=TickLog(cofbuf_len) #再度平均値
+
         self._sample_width=sample_width
         self._cofbuf_len=cofbuf_len
         self._symbol_ticks=symbol_ticks
-        self._rb=RingBuffer[float](symbol_ticks*sample_width,0)
+        # self._rb=RingBuffer[float](symbol_ticks*sample_width,0)
         self._gap=0 #gap
         self._nor=0 #ストリームから読みだしたTick数
         self._pmax:float
@@ -253,7 +140,9 @@ class CoffPreambleDetector(PreambleDetector[CoffPreamble,"CoffPreambleDetector.D
         #ローカル変数の生成
         avi=self._avi
         cof=self._cof
-        rb=self._rb
+        # rb=self._rb
+        ave1=self._average1
+        tickbuf=self._tickbuf
         try:
             while True:
                 # ギャップ探索
@@ -264,48 +153,67 @@ class CoffPreambleDetector(PreambleDetector[CoffPreamble,"CoffPreambleDetector.D
                 if self._co_step==1:
                     while True:
                         try:
-                            rb.append(next(avi))
+                            a=next(avi)
+                            # rb.append(a)
+                            ave1.append(avi._buf.tail)
+                            tickbuf.append(avi._buf.tail)
+                            # assert(rb.tail==ave1.tail)
+                            # assert(rb.top==ave1.top)
+                            # print(rb.top,self.average1._buf.top)
+                            # self.average2.push(avi._buf.tail)
+                            # print(rb.tail,self.average1.tail/self._cofbuf_len)
                         except RecoverableStopIteration as e:
                             raise #nextやりなおし
                         # print(rb.tail)
                         self._nor=self._nor+1
-                        self._gap=rb.top-rb.tail
+                        self._gap=ave1.top-ave1.tail
                         if self._gap<0.5:
                             continue
-                        if rb.top<0.1:
+                        if ave1.top<0.1:
                             continue
-                        if rb.tail>-0.1:
+                        if ave1.tail>-0.1:
                             continue
                         break
+                    print(ave1.tail,ave1.top) #-0.25432290820230913 0.27101677789788603
                     self._co_step=2 #Co進行
                 if self._co_step==2:
                     # print(1,self._nor,rb.tail,rb.top,self._gap)
                     # ギャップ最大化
                     while True:
                         try:
-                            rb.append(next(avi))
+                            a=next(avi)
+                            # rb.append(a)
+                            ave1.append(avi._buf.tail)
+                            tickbuf.append(avi._buf.tail)
+                            # assert(rb.tail==ave1.tail)
+                            # assert(rb.top==ave1.top)
+                            # self.average2.push(avi._buf.tail)
                         except RecoverableStopIteration as e:
                             raise #nextやりなおし
                         self._nor=self._nor+1
-                        w=rb.top-rb.tail
+                        w=ave1.top-ave1.tail
                         if w>=self._gap:
                             # print(w,self._gap)
                             self._gap=w
                             continue
                         break
-                    # print(2,nor,rb.tail,rb.top,self._gap)
                     if self._gap<self._threshold:
                         self._co_step=0 #コルーチンをリセット
                         continue
-                    # print(3,nor,rb.tail,rb.top,self._gap)
                     # print(2,nor,self._gap)
-                    self._pmax=rb.tail
+                    self._pmax=ave1.tail
+                    print(ave1.tail,ave1.top) #-1.0 0.9995798842588445
+
                     self._co_step=3
                 if self._co_step==3:
                     #同期シンボルピーク検出
                     while True:
                         try:
                             n=next(avi)
+                            ave1.append(avi._buf.tail)
+                            tickbuf.append(avi._buf.tail)
+                            m=ave1.tail
+                            assert(n==m)
                             self._nor=self._nor+1
                             if n>self._pmax:
                                 self._pmax=n
@@ -325,18 +233,49 @@ class CoffPreambleDetector(PreambleDetector[CoffPreamble,"CoffPreambleDetector.D
                     # #ピーク周辺の読出し
                     # [next(cof) for _ in range(symbol_ticks//4)]
                     #バッファリングしておいた相関値に3値平均フィルタ
-                    buf=cof.buf[-symbol_ticks:]
+                    iom=tickbuf.indexOfAve3Max(symbol_ticks)
+                    buf=list(cof.buf.subIter(len(cof.buf)-symbol_ticks,symbol_ticks)) #cof.buf[-symbol_ticks:]
+                    # print("buf","len:",len(buf),buf[-3],buf[-2],buf[-1],sum(buf[-3:]))
+                    # print("cuf","len:",len(buf),self._sumbuf._rb._buf[0],self._sumbuf._rb._buf[1],self._sumbuf._rb._buf[2],sum(self._sumbuf._rb._buf),self._sumbuf._buf[6])
+
+                    # t1=[]
+                    # t2=[]
+                    # for i in range(10):
+                    #     t1.append(buf[-i-1]+buf[-i-2]+buf[-i-3])
+                    # for i in range(10):
+                    #     t2.append(self._sumbuf._buf[-i])
+                    # for i,j in zip(t1,t2):
+                    #     print(">",i,j)
+
+
+
+
+
+
+
                     b=[(i+self._nor-symbol_ticks+1,buf[i]+buf[i+1]+buf[i+2]) for i in range(len(buf)-2)] #位置,相関値
                     b.sort(key=lambda x: x[1],reverse=True)
+                    print(b[0],b[0][0]-(self._nor-symbol_ticks+1))
+                    print(iom)
+                    print(iom[0]+self._nor-symbol_ticks)
+
+
                     #ピークを基準に詳しく様子を見る。
                     peak_pos=b[0][0]
+                    peak_pos2=iom[0]+self._nor-symbol_ticks-1
+                    assert(peak_pos==peak_pos2)
                     # print(peak_pos-symbol_ticks*3,(self._nor-(peak_pos+symbol_ticks*3)))
                     #Lレベルシンボルの範囲を得る
                     # s=peak_pos-symbol_ticks*3-(self._nor-cofbuf_len)
                     s=peak_pos-symbol_ticks*sample_width-(self._nor-cofbuf_len)
-                    lw=cof.buf[s:s+cycle*symbol_ticks]
+                    lw=list(cof.buf.subIter(s,cycle*symbol_ticks))
+                    # lw=cof.buf[s:s+cycle*symbol_ticks]
                     lw.sort()
                     #lw=lw[:len(lw)*3//2+1]#効いてないので一時的にコメントアウト
+                    lw2=list(tickbuf.subIter(s,cycle*symbol_ticks))
+                    lw2.sort()
+                    assert(lw==lw2)
+
                     if sum(lw)/len(lw)>lw[0]*0.66:
                         # print("ERR(L",peak_pos+src.pos,sum(lw)/len(lw),min(lw))
                         self._co_step=0#co_step0からやり直す。
@@ -344,15 +283,19 @@ class CoffPreambleDetector(PreambleDetector[CoffPreamble,"CoffPreambleDetector.D
                     #Hレベルシンボルの範囲を得る
                     # s=peak_pos-symbol_ticks*6-(self._nor-cofbuf_len)
                     s=peak_pos-symbol_ticks*sample_width*2-(self._nor-cofbuf_len)
-                    lh=cof.buf[s:s+cycle*symbol_ticks]
+                    lh=list(cof.buf.subIter(s,cycle*symbol_ticks))
+                    # lh=cof.buf[s:s+cycle*symbol_ticks]
                     lh.sort(reverse=True)
                     #lh=lh[:len(lh)*3//2+1] 効いてないので一時的にコメントアウト
+                    lh2=list(tickbuf.subIter(s,cycle*symbol_ticks))
+                    lh2.sort(reverse=True)
+                    assert(lh==lh2)
                     if sum(lh)/len(lh)<lh[0]*0.66:
                         # print("ERR(H",peak_pos+src.pos,sum(lh)/len(lh),max(lh))
                         self._co_step=0 #co_step0からやり直す。
                         continue #バラツキ大きい
                     #値の高いのを抽出してピークとする。
-                    # print(peak_pos)
+                    print(peak_pos-self._nor)#-54
                     return self.DetectedPreamble(peak_pos-self._nor)#現在値からの相対位置
                 raise RuntimeError("Invalid co_step",self._co_step)
         except StopIteration as e:

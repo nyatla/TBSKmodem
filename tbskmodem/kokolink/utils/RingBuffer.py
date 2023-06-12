@@ -17,12 +17,16 @@ class RingBuffer(Generic[T]):
         self._p=0 #次の書き込み位置. データの先頭位置.+1でデータの末尾
 
     def append(self,v:T)->T:
+        """ 要素を一つ加える
+        """
         length=len(self._buf)
         ret=self._buf[self._p]
         self._buf[self._p]=v
         self._p=(self._p+1)%length
         return ret
     def extend(self,v:Iterable[T]):
+        """ Iterableを加える
+        """
         for i in v:
             self.append(i)
     
@@ -49,25 +53,34 @@ class RingBuffer(Generic[T]):
 
     @property
     def tail(self)->T:
-        """ バッファの末尾 もっとも新しい要素"""
+        """ バッファの末尾 もっとも新しい要素
+        """
         length=len(self._buf)
         return self._buf[(self._p-1+length)%length]
     @property
     def top(self)->T:
-        """ バッファの先頭 最も古い要素"""
+        """ バッファの先頭 最も古い要素
+        """
         return self._buf[self._p]
     # def __iter__(self)->List:
     #     return self[:] #いらないとおもう。
-
-    def __getitem__(self,s)->List[T]:
-        """ 通常のリストにして返します。
-            必要に応じて再配置します。再配置せずに取り出す場合はsubIterを使用します。
-        """
+    def __getitem__(self,idx)->T:
         b=self._buf
-        if self._p!=0:
-            self._buf= b[self._p:]+b[:self._p]
-        self._p=0
-        return self._buf[s]
+        if idx>=0:
+            return b[(self._p+idx)%len(b)]
+        else:
+            return b[(self._p-1+idx)%len(b)]
+
+
+    # def __getitem__(self,s)->List[T]:
+    #     """ 通常のリストにして返します。
+    #         必要に応じて再配置します。再配置せずに取り出す場合はsubIterを使用します。
+    #     """
+    #     b=self._buf
+    #     if self._p!=0:
+    #         self._buf= b[self._p:]+b[:self._p]
+    #     self._p=0
+    #     return self._buf[s]
 
     def __len__(self)->int:
         return len(self._buf)
