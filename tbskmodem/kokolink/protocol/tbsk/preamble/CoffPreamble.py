@@ -5,8 +5,7 @@ from tbskmodem.kokolink.protocol.tbsk.toneblock import TraitTone
 
 from ....types import NoneType
 from ....interfaces import IRoStream
-from ....utils.recoverable import RecoverableException, RecoverableStopIteration
-from ....utils.math import AverageInterator
+from ....utils.recoverable import RecoverableStopIteration
 from ....utils import RingBuffer,BufferedIterator,AsyncMethod
 from ....streams import BitStream
 from ..traitblockcoder import TraitBlockEncoder
@@ -66,7 +65,7 @@ class TickLog(RingBuffer):
     def __init__(self,nofbuf):
         super().__init__(nofbuf,0)
     def indexOfAve3Max(self,size_back):
-        """ 過去N個の中で最大の値とインデクスを探す.
+        """ 過去N個の中で3値平均の最大の値とインデクスを探す.
             探索範囲は,+1,n-1となる。
             戻り値は[-(size_back-1),0]
         """
@@ -87,19 +86,40 @@ class TickLog(RingBuffer):
             a[n%3]=i
             n=n+1
         return max_i+1,max_v
-    # def max(self,pos,size):
-    #     """ 過去N個の中で最大の値とインデクスを探す.
-    #         探索範囲は,+1,n-1となる。
-    #         戻り値は[-(size_back-1),0]
-    #     """
-    #     # 探索開始位置 RBの後端からsize_back戻ったところ
-    #     siter=self.subIter(pos,size)
-    #     max_v=next(siter)
-    #     for i in siter:
-    #         if i>max_v:
-    #             max_v=i
-    #     return max_v
-   
+    def max(self,s,size):
+        """ 過去N個の中で最大の値とインデクスを探す.
+            探索範囲は,+1,n-1となる。
+            戻り値は[-(size_back-1),0]
+        """
+        assert(size>0)
+        siter=self.subIter(s,size)
+        max_v=next(siter)
+        n=1
+        for i in siter:
+            if i>max_v:
+                max_v=i
+            n=n+1
+        return max_v
+    def min(self,s,size):
+        """ 過去N個の中で最大の値とインデクスを探す.
+            探索範囲は,+1,n-1となる。
+            戻り値は[-(size_back-1),0]
+        """
+        assert(size>0)
+        # 探索開始位置 RBの後端からsize_back戻ったところ
+        siter=self.subIter(s,size)
+        min_v=next(siter)
+        n=1
+        for i in siter:
+            if i<min_v:
+                min_v=i
+            n=n+1
+        return min_v    
+    def ave(self,s,size):
+        assert(size>0)
+        # 探索開始位置 RBの後端からsize_back戻ったところ
+        s=sum(self.subIter(s,size))
+        return s/size
 
 
 class CoffPreambleDetector(PreambleDetector[CoffPreamble,"CoffPreambleDetector.DetectedPreamble"]):
@@ -231,25 +251,36 @@ class CoffPreambleDetector(PreambleDetector[CoffPreamble,"CoffPreambleDetector.D
                     # s=peak_pos-symbol_ticks*3-(self._nor-cofbuf_len)
                     s=peak_pos2-symbol_ticks*sample_width-(self._nor-cofbuf_len)
                     #lw=lw[:len(lw)*3//2+1]#効いてないので一時的にコメントアウト
-                    lw=list(tickbuf.subIter(s,cycle*symbol_ticks))
-                    lw.sort()
-                    print("lw",sum(lw))#2:-399.6595476442715
-
-                    if sum(lw)/len(lw)>lw[0]*0.66:
-                        # print("ERR(L",peak_pos+src.pos,sum(lw)/len(lw),min(lw))
+                    # lw=list(tickbuf.subIter(s,cycle*symbol_ticks))
+                    # print("lw",sum(lw)/len(lw),tickbuf.ave(s,cycle*symbol_ticks))#2:-399.6595476442715
+                    # lw.sort()
+                    # print("lw",sum(lw))#2:-399.6595476442715
+                    # print("lw",lw[0],tickbuf.min(s,cycle*symbol_ticks))#2:-399.6595476442715
+                    # if sum(lw)/len(lw)>lw[0]*0.66:
+                    #     # print("ERR(L",peak_pos+src.pos,sum(lw)/len(lw),min(lw))
+                    #     self._co_step=0#co_step0からやり直す。
+                    #     continue #バラツキ大きい
+                    if tickbuf.ave(s,cycle*symbol_ticks)>tickbuf.min(s,cycle*symbol_ticks)*0.66:
                         self._co_step=0#co_step0からやり直す。
                         continue #バラツキ大きい
+
                     #Hレベルシンボルの範囲を得る
                     # s=peak_pos-symbol_ticks*6-(self._nor-cofbuf_len)
                     s=peak_pos2-symbol_ticks*sample_width*2-(self._nor-cofbuf_len)
                     #lh=lh[:len(lh)*3//2+1] 効いてないので一時的にコメントアウト
-                    lh=list(tickbuf.subIter(s,cycle*symbol_ticks))
-                    lh.sort(reverse=True)
-                    print("lh",sum(lh)) #2:399.63887917843374
-                    if sum(lh)/len(lh)<lh[0]*0.66:
-                        # print("ERR(H",peak_pos+src.pos,sum(lh)/len(lh),max(lh))
+                    # lh=list(tickbuf.subIter(s,cycle*symbol_ticks))
+                    # print("lh",sum(lh)/len(lh),tickbuf.ave(s,cycle*symbol_ticks))#2:-399.6595476442715
+                    # lh.sort(reverse=True)
+                    # print("lh",sum(lh)) #2:399.63887917843374
+                    # print("lh",lh[0],tickbuf.max(s,cycle*symbol_ticks))#2:-399.6595476442715
+                    # if sum(lh)/len(lh)<lh[0]*0.66:
+                    #     # print("ERR(H",peak_pos+src.pos,sum(lh)/len(lh),max(lh))
+                    #     self._co_step=0 #co_step0からやり直す。
+                    #     continue #バラツキ大きい
+                    if tickbuf.ave(s,cycle*symbol_ticks)<tickbuf.max(s,cycle*symbol_ticks)*0.66:
                         self._co_step=0 #co_step0からやり直す。
                         continue #バラツキ大きい
+
                     #値の高いのを抽出してピークとする。
                     print(peak_pos2-self._nor)#-54,2=-55
                     return self.DetectedPreamble(peak_pos2-self._nor)#現在値からの相対位置
