@@ -64,61 +64,57 @@ class TickLog(RingBuffer):
     """
     def __init__(self,nofbuf):
         super().__init__(nofbuf,0)
-    def indexOfAve3Max(self,size_back):
+    def indexOfSum3Max(self,size_back):
         """ 過去N個の中で3値平均の最大の値とインデクスを探す.
             探索範囲は,+1,n-1となる。
             戻り値は[-(size_back-1),0]
         """
         assert(size_back>0)
-        buf=self._buf
-        buflen=len(buf)
+        buflen=len(self)
         # 探索開始位置 RBの後端からsize_back戻ったところ
         siter=self.subIter(buflen-size_back,size_back)
         a=[next(siter),next(siter),next(siter)]        
         max_i=0
         max_v=sum(a)
-        n=1
+        n=0
         for i in siter:
             s=sum(a)
+            print(n,s)
             if s>max_v:
-                max_i=n
+                max_i=n+1
                 max_v=s
             a[n%3]=i
             n=n+1
         return max_i+1,max_v
-    def max(self,s,size):
+    def max(self,start,size):
         """ 過去N個の中で最大の値とインデクスを探す.
             探索範囲は,+1,n-1となる。
             戻り値は[-(size_back-1),0]
         """
         assert(size>0)
-        siter=self.subIter(s,size)
+        siter=self.subIter(start,size)
         max_v=next(siter)
-        n=1
         for i in siter:
             if i>max_v:
                 max_v=i
-            n=n+1
         return max_v
-    def min(self,s,size):
+    def min(self,start,size):
         """ 過去N個の中で最大の値とインデクスを探す.
             探索範囲は,+1,n-1となる。
             戻り値は[-(size_back-1),0]
         """
         assert(size>0)
         # 探索開始位置 RBの後端からsize_back戻ったところ
-        siter=self.subIter(s,size)
+        siter=self.subIter(start,size)
         min_v=next(siter)
-        n=1
         for i in siter:
             if i<min_v:
                 min_v=i
-            n=n+1
         return min_v    
-    def ave(self,s,size):
+    def ave(self,start,size):
         assert(size>0)
         # 探索開始位置 RBの後端からsize_back戻ったところ
-        s=sum(self.subIter(s,size))
+        s=sum(self.subIter(start,size))
         return s/size
 
 
@@ -238,14 +234,14 @@ class CoffPreambleDetector(PreambleDetector[CoffPreamble,"CoffPreambleDetector.D
                     # #ピーク周辺の読出し
                     # [next(cof) for _ in range(symbol_ticks//4)]
                     #バッファリングしておいた相関値に3値平均フィルタ
-                    iom=tickbuf.indexOfAve3Max(symbol_ticks)
+                    iom=tickbuf.indexOfSum3Max(symbol_ticks)
 
 
 
                     #ピークを基準に詳しく様子を見る。
                     peak_pos2=iom[0]+self._nor-symbol_ticks-1
                     # assert(peak_pos==peak_pos2)
-                    print("peak_pos2",peak_pos2)# 2:1299
+                    #print("peak_pos2",peak_pos2)# 2:1299
                     # print(peak_pos-symbol_ticks*3,(self._nor-(peak_pos+symbol_ticks*3)))
                     #Lレベルシンボルの範囲を得る
                     # s=peak_pos-symbol_ticks*3-(self._nor-cofbuf_len)

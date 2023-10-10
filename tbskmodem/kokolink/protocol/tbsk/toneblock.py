@@ -31,10 +31,9 @@ class MSeqTone(TraitTone):
     """ トーン信号を巡回符号でBPSK変調した信号です。
         2^bits-1*len(base_tone)の長さです。
     """
-    @overload
     def __init__(self,mseq:MSequence,base_tone:TraitTone=None):
         self._sequence:Tuple(int)
-        ms=mseq.getCyclesMap()
+        ms=mseq.getOneCycle()
         tone=base_tone if base_tone is not None else SinTone(20,1)
         self._sequence=tuple(ms)
         a=sum([[j*(i*2-1) for j in tone] for i in ms],[]) #flatten

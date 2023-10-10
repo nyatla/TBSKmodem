@@ -137,7 +137,7 @@ class TraitBlockDecoder(IBitStream,IDecoder[IRoStream[float],int],BasicRoStream[
             self._preload_size=self._trait_block_ticks+ave_window//2-1    #平均値フィルタの初期化サイズ。ave_window/2足してるのは、平均値の遅延分.
             self._block_skip_size=self._trait_block_ticks-1-2 #スキップ数
             self._block_skip_counter=self._block_skip_size #スキップ数
-            self._samples=[] #観測値
+            self._samples=[] #観測値(RecoveableStopIteration対策)
             self._shift=0
         # try:
         #     [next(self._avefilter) for i in range(self._trait_block_ticks+ave_window//2)]
