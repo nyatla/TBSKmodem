@@ -39,6 +39,9 @@ It is possible with the microphone and speakers provided in a personal computer.
 | Bandwidths | 5Hz -  |
 | Error correction/detection | No |
 
+Modulation format: [TBSKmodem.EN.pdf](./doc/TBSKmodem.EN.pdf)
+
+
 ### Trait block differential modulation
 
 Trait block differential modulation uses an any shaped tone signal and its inverted value as a binary transmission symbol instead of a waveform symbol.
