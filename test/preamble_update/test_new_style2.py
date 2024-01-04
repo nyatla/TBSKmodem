@@ -1,4 +1,5 @@
 """ PreambleのwaitAForSymbolのアップデート実験用。
+    入力値を少しゆがませてある。
 """
 import math,random
 
