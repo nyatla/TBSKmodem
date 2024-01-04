@@ -39,7 +39,7 @@ It is possible with the microphone and speakers provided in a personal computer.
 | Bandwidths | 5Hz -  |
 | Error correction/detection | No |
 
-Modulation format: [TBSKmodem.EN.pdf](./doc/TBSKmodem.EN.pdf)
+Signal specification: [TBSKmodem.EN.pdf](./doc/TBSKmodem.EN.pdf)
 
 
 ### Trait block differential modulation
