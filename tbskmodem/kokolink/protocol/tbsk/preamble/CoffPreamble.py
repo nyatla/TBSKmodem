@@ -79,7 +79,7 @@ class TickLog(RingBuffer):
         n=0
         for i in siter:
             s=sum(a)
-            print(n,s)
+            #print(n,s)
             if s>max_v:
                 max_i=n+1
                 max_v=s
@@ -180,7 +180,7 @@ class CoffPreambleDetector(PreambleDetector[CoffPreamble,"CoffPreambleDetector.D
                         if ave1.tail>-0.1:
                             continue
                         break
-                    print(ave1.tail,ave1.top) #-0.25432290820230913 0.27101677789788603
+                    #print(ave1.tail,ave1.top) #-0.25432290820230913 0.27101677789788603
                     self._co_step=2 #Co進行
                 if self._co_step==2:
                     # print(1,self._nor,rb.tail,rb.top,self._gap)
@@ -204,7 +204,7 @@ class CoffPreambleDetector(PreambleDetector[CoffPreamble,"CoffPreambleDetector.D
                         continue
                     # print(2,nor,self._gap)
                     self._pmax=ave1.tail
-                    print(ave1.tail,ave1.top) #-1.0 0.9995798842588445
+                    #print(ave1.tail,ave1.top) #-1.0 0.9995798842588445
 
                     self._co_step=3
                 if self._co_step==3:
@@ -278,7 +278,7 @@ class CoffPreambleDetector(PreambleDetector[CoffPreamble,"CoffPreambleDetector.D
                         continue #バラツキ大きい
 
                     #値の高いのを抽出してピークとする。
-                    print(peak_pos2-self._nor)#-54,2=-55
+                    #print(peak_pos2-self._nor)#-54,2=-55
                     return self.DetectedPreamble(peak_pos2-self._nor)#現在値からの相対位置
                 raise RuntimeError("Invalid co_step",self._co_step)
         except StopIteration as e:
