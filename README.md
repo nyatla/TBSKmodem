@@ -336,8 +336,7 @@ In TBSK, after detecting a signal, it endlessly demodulates whatever the signal 
 Fix the packet length in the upper communication specification or send the length parameter first.
 
 
-Congratulations! You are now a TBSK Master! [アンタヤルーニャ](http://wiki.ffo.jp/html/2682.html)
-
+Congratulations! You are now a TBSK Master!
 
 
 
