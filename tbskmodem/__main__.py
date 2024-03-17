@@ -52,14 +52,11 @@ def str2tone(param:str,carrier:int)->TraitTone:
                 return TbskTone.createSin(int(p[0]),int(p[1]))
             raise RuntimeError("sin must be 'sin:point,cycle' ex 'sin:10,10'")
         elif name=="pn":
-            v=re.match(r'^[1-9][0-9]*(\,[1-9][0-9]*)\,',value)
+            v=re.match(r'^[1-9][0-9]*(\,[1-9][0-9]*)$',value)
             if v is not None:
                 p=v.group().split(",")
-                subtone=value[v.span()[1]:]
-                if "pn" in subtone:
-                    raise ValueError("Recursion error")
-                return TbskTone.createPn(int(p[0]),int(p[1]),str2tone(subtone,carrier))
-            raise RuntimeError("pn must be 'pn:seed,interval,basetone' ex 'pn:299,2,sin:10,10'")
+                return TbskTone.createPn(int(p[0]),int(p[1]))
+            raise RuntimeError("pn must be 'pn:seed,length' ex 'pn:299,100'")
         elif name=="mseq":
             v=re.match(r'^[1-9][0-9]*(\,[1-9][0-9]*)\,',value)
             if v is not None:

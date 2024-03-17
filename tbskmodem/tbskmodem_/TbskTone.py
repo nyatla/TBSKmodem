@@ -56,18 +56,22 @@ class TbskTone:
         ...
     @classmethod
     @overload
-    def createPn(cls,seed:int,interval:int)->PnTone:
+    def createPn(cls,seed:int,interval:int,length:int)->PnTone:
+        """ seedのPN符号を使用して、interval単位でPN符号を適応した長さlengthのトーン信号を得る。
+        """
         ...
     @classmethod
     @overload
-    def createPn(cls,seed:int)->PnTone:
+    def createPn(cls,seed:int,length:int)->PnTone:
+        """ seedのPN符号を使用して、1tickごとにPN符号を適応した長さlengthのトーン信号を得る。
+        """
         ...
     @classmethod
     def createPn(cls,*args,**kwds)->PnTone:
-        if isinstances(args,(int,)):
-            return PnTone(args[0],2,None)
-        elif isinstances(args,(int,int)):
-            return PnTone(args[0],args[1],None)
+        if isinstances(args,(int,int,)):
+            return PnTone(args[0],1,TraitTone([1]*args[1]))
+        elif isinstances(args,(int,int,int)):
+            return PnTone(args[0],args[1],TraitTone([1]*args[2]))
         elif isinstances(args,(int,int,TraitTone)):
             return PnTone(args[0],args[1],args[2])
         else:
