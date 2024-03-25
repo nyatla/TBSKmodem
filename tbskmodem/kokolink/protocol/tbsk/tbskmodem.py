@@ -68,14 +68,15 @@ class TbskModulator_impl:
         self._preamble=preamble if preamble is not None else CoffPreamble(self._tone)
         self._enc=TraitBlockEncoder(tone)
         
-    def modulateAsBit(self,src:Union[Iterable[int],Iterator[int]],suffix:Iterable[float]=None,suffix_pad:bool=True)->Iterator[float]:
+    def modulateAsBit(self,src:Union[Iterable[int],Iterator[int]],prefix:Iterable[float]=None,suffix:Iterable[float]=None,suffix_pad:bool=True)->Iterator[float]:
         """
         Args:
-
+        prefix
+            ペイロードシンボルに先行する任意振幅値.
         suffix
-        ペイロードシンボルに続く任意振幅値。
+            ペイロードシンボルに続く任意振幅値.
         suffix_pad
-        解析機に必要なパディング
+            解析機に必要なパディング
         """
         ave_window_shift=max(int(len(self._tone)*0.1),2)//2 #検出用の平均フィルタは0.1*len(tone)//2だけずれてる。ここを直したらTraitBlockDecoderも直せ
         if isinstance(src,Iterable):
@@ -84,6 +85,8 @@ class TbskModulator_impl:
             self._preamble.getPreamble(),
             self._enc.setInput(self.DiffBitEncoder(0,BitStream(src,1))),
         ]
+        if prefix is not None:
+            ch.insert(0,prefix)
         if suffix is not None:
             ch.append(suffix)
         #demodulatorが平均値で補正してる関係で遅延分を足してる。
